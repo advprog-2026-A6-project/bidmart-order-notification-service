@@ -63,7 +63,7 @@ tasks.jacocoTestReport {
     }
 }
 
-tasks.withType<com.github.spotbugs.snom.SpotBugsTask> {
+tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
     reports.create("html") {
         required.set(true)
         outputLocation.set(layout.buildDirectory.file("reports/spotbugs/${name}.html"))

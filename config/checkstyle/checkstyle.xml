@@ -4,7 +4,5 @@
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <module name="Checker">
-    <module name="TreeWalker">
-        <module name="MethodName"/>
-    </module>
+    <module name="TreeWalker"/>
 </module>
