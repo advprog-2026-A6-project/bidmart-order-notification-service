@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ "staging", "main" ]
+  pull_request:
+    branches: [ "staging", "main" ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run Checkstyle
+        run: ./gradlew checkstyleMain checkstyleTest
+
+      - name: Run Test + Coverage
+        run: ./gradlew test jacocoTestReport
+
+      - name: Build
+        run: ./gradlew build
+
+      # Dummy CD
+      - name: Deploy to Staging
+        if: github.ref == 'refs/heads/staging'
+        run: echo "Deploying to STAGING..."
+
+      - name: Deploy to Production
+        if: github.ref == 'refs/heads/main'
+        run: echo "Deploying to PRODUCTION..."
