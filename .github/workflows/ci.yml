@@ -27,8 +27,9 @@ jobs:
       # - name: Run Checkstyle
       #   run: ./gradlew checkstyleMain checkstyleTest
 
-      - name: Run Test + Coverage
-        run: ./gradlew test jacocoTestReport
+      - name: Run Test
+        run: ./gradlew test
+
 
       - name: Build
         run: ./gradlew build
