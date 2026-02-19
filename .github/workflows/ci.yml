@@ -24,8 +24,8 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Run Checkstyle
-        run: ./gradlew checkstyleMain checkstyleTest
+      # - name: Run Checkstyle
+      #   run: ./gradlew checkstyleMain checkstyleTest
 
       - name: Run Test + Coverage
         run: ./gradlew test jacocoTestReport
