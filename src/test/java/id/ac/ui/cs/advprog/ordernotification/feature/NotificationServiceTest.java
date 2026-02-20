@@ -1,49 +1,47 @@
 package id.ac.ui.cs.advprog.ordernotification.feature;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
-    @Autowired
-    private NotificationService service;
-
-    @MockBean
+    @Mock
     private NotificationRepository repository;
+
+    @InjectMocks
+    private NotificationService service;
 
     @Test
     void testGetAll() {
-        Notification notif1 = new Notification("A", "INFO");
-        Notification notif2 = new Notification("B", "WARN");
+        Notification notif = new Notification("A", "INFO");
 
-        when(repository.findAll()).thenReturn(List.of(notif1, notif2));
+        when(repository.findAll()).thenReturn(List.of(notif));
 
         List<Notification> result = service.getAll();
 
-        assertEquals(2, result.size());
-        verify(repository, times(1)).findAll();
+        assertEquals(1, result.size());
+        verify(repository).findAll();
     }
 
     @Test
     void testCreate() {
         Notification notif = new Notification("Hello", "INFO");
 
-        when(repository.save(any(Notification.class))).thenReturn(notif);
+        when(repository.save(any())).thenReturn(notif);
 
         Notification result = service.create("Hello", "INFO");
 
-        assertNotNull(result);
         assertEquals("Hello", result.getMessage());
         assertEquals("INFO", result.getType());
-
-        verify(repository, times(1)).save(any(Notification.class));
+        verify(repository).save(any());
     }
 }

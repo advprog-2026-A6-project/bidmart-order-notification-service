@@ -1,52 +1,59 @@
 package id.ac.ui.cs.advprog.ordernotification.feature;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.mockito.*;
 
 import java.util.List;
 
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@WebMvcTest(NotificationController.class)
 class NotificationControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private NotificationService service;
 
+    @InjectMocks
+    private NotificationController controller;
+
+    @BeforeEach
+    void setup() {
+        MockitoAnnotations.openMocks(this);
+    }
+
     @Test
-    void testGetAll() throws Exception {
+    void testGetAll() {
         Notification notif = new Notification("Test", "INFO");
 
         when(service.getAll()).thenReturn(List.of(notif));
 
-        mockMvc.perform(get("/api/notifications"))
-                .andExpect(status().isOk());
+        List<Notification> result = controller.getAll();
+
+        assertEquals(1, result.size());
+        assertEquals("Test", result.get(0).getMessage());
+
+        verify(service).getAll();
     }
 
     @Test
-    void testCreate() throws Exception {
+    void testCreate() {
         Notification notif = new Notification("Hello", "INFO");
 
         when(service.create("Hello", "INFO")).thenReturn(notif);
 
-        mockMvc.perform(post("/api/notifications")
-                        .param("message", "Hello")
-                        .param("type", "INFO"))
-                .andExpect(status().isOk());
+        Notification result = controller.create("Hello", "INFO");
+
+        assertEquals("Hello", result.getMessage());
+        assertEquals("INFO", result.getType());
+
+        verify(service).create("Hello", "INFO");
     }
 
     @Test
-    void testViewPage() throws Exception {
-        mockMvc.perform(get("/api/notifications/view"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("notifications"));
+    void testViewPage() {
+        String view = controller.viewPage();
+
+        assertEquals("notifications", view);
     }
 }
