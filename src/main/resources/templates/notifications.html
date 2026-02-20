@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html>
 <head>
     <title>Notifications</title>
 </head>
@@ -7,6 +7,10 @@
 
 <h1>Notifications</h1>
 
+<input type="text" id="message" placeholder="Message">
+<input type="text" id="type" placeholder="Type">
+
+<button onclick="createNotification()">Add Notification</button>
 <button onclick="loadNotifications()">Load Notifications</button>
 
 <ul id="list"></ul>
@@ -14,18 +18,27 @@
 <script>
     function loadNotifications() {
         fetch('/api/notifications')
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
                 const list = document.getElementById("list");
                 list.innerHTML = "";
 
-                data.forEach(item => {
+                data.forEach(n => {
                     const li = document.createElement("li");
-                    li.innerText = item.message + " - " + item.type;
+                    li.innerText = n.message + " - " + n.type;
                     list.appendChild(li);
                 });
-            })
-            .catch(error => console.error(error));
+            });
+    }
+
+    function createNotification() {
+        const message = document.getElementById("message").value;
+        const type = document.getElementById("type").value;
+
+        fetch(`/api/notifications?message=${message}&type=${type}`, {
+            method: "POST"
+        })
+            .then(() => loadNotifications());
     }
 </script>
 
