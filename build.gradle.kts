@@ -50,8 +50,10 @@ dependencies {
     implementation("org.postgresql:postgresql")
     implementation("org.postgresql:postgresql:42.7.3")
 
+    testImplementation("com.h2database:h2")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    runtimeOnly("com.h2database:h2")
 }
 
 tasks.withType<Test> {
