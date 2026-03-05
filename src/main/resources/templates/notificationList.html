@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Notification List</title>
+</head>
+<body>
+
+<h2>Notifications</h2>
+
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Message</th>
+        <th>Type</th>
+    </tr>
+
+    <tr th:each="notif : ${notifications}">
+        <td th:text="${notif.id}"></td>
+        <td th:text="${notif.message}"></td>
+        <td th:text="${notif.type}"></td>
+    </tr>
+</table>
+
+<br>
+<a href="/order/list">Kembali ke Order</a>
+
+</body>
+</html>

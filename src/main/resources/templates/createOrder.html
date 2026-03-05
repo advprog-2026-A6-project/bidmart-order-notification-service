@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Create Order</title>
+</head>
+<body>
+
+<h2>Create Order</h2>
+
+<form th:action="@{/order/create}" th:object="${order}" method="post">
+    <label>User ID:</label><br>
+    <input type="text" th:field="*{userId}" required><br><br>
+
+    <label>Total Price:</label><br>
+    <input type="number" th:field="*{totalPrice}" required><br><br>
+
+    <button type="submit">Submit</button>
+</form>
+
+<br>
+<a href="/order/list">Lihat Semua Order</a>
+
+</body>
+</html>
