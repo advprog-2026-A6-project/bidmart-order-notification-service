@@ -1,24 +1,56 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="id">
 <head>
+    <meta charset="UTF-8">
     <title>Create Order</title>
 </head>
 <body>
 
-<h2>Create Order</h2>
+<h1>Create Order</h1>
 
-<form th:action="@{/order/create}" th:object="${order}" method="post">
-    <label>User ID:</label><br>
-    <input type="text" th:field="*{userId}" required><br><br>
+<input type="text" id="userId" placeholder="User ID">
+<input type="number" id="totalPrice" placeholder="Total Price">
 
-    <label>Total Price:</label><br>
-    <input type="number" th:field="*{totalPrice}" required><br><br>
+<button onclick="createOrder()">Create Order</button>
+<button onclick="loadOrders()">Load Orders</button>
 
-    <button type="submit">Submit</button>
-</form>
+<ul id="orders"></ul>
 
-<br>
-<a href="/order/list">Lihat Semua Order</a>
+<script>
+
+    function loadOrders() {
+        fetch('/api/orders')
+            .then(res => res.json())
+            .then(data => {
+
+                const list = document.getElementById("orders");
+                list.innerHTML = "";
+
+                data.forEach(o => {
+                    const li = document.createElement("li");
+                    li.innerText =
+                        "ID: " + o.id +
+                        " | User: " + o.userId +
+                        " | Price: " + o.totalPrice +
+                        " | Status: " + o.status;
+
+                    list.appendChild(li);
+                });
+            });
+    }
+
+    function createOrder() {
+
+        const userId = document.getElementById("userId").value;
+        const totalPrice = document.getElementById("totalPrice").value;
+
+        fetch(`/api/orders?userId=${userId}&totalPrice=${totalPrice}`, {
+            method: "POST"
+        })
+            .then(() => loadOrders());
+    }
+
+</script>
 
 </body>
 </html>

@@ -1,30 +1,46 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="id">
 <head>
+    <meta charset="UTF-8">
     <title>Order List</title>
 </head>
 <body>
 
-<h2>Order List</h2>
+<h1>Orders</h1>
 
-<table border="1">
-    <tr>
-        <th>ID</th>
-        <th>User ID</th>
-        <th>Total Price</th>
-        <th>Status</th>
-    </tr>
+<button onclick="loadOrders()">Load Orders</button>
 
-    <tr th:each="order : ${orders}">
-        <td th:text="${order.id}"></td>
-        <td th:text="${order.userId}"></td>
-        <td th:text="${order.totalPrice}"></td>
-        <td th:text="${order.status}"></td>
-    </tr>
-</table>
+<ul id="orders"></ul>
 
-<br>
-<a href="/order/create">Tambah Order</a>
+<script>
+
+    function loadOrders() {
+
+        fetch('/api/orders')
+            .then(res => res.json())
+            .then(data => {
+
+                const list = document.getElementById("orders");
+                list.innerHTML = "";
+
+                data.forEach(order => {
+
+                    const li = document.createElement("li");
+
+                    li.innerText =
+                        "ID: " + order.id +
+                        " | User: " + order.userId +
+                        " | Price: " + order.totalPrice +
+                        " | Status: " + order.status;
+
+                    list.appendChild(li);
+                });
+
+            });
+
+    }
+
+</script>
 
 </body>
 </html>

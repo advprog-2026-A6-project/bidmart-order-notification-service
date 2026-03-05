@@ -2,14 +2,12 @@ package id.ac.ui.cs.advprog.ordernotification.controller;
 
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.service.OrderService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
-@RequestMapping("/order")
+@RestController
+@RequestMapping("/api/orders")
 public class OrderController {
 
     private final OrderService service;
@@ -18,22 +16,20 @@ public class OrderController {
         this.service = service;
     }
 
-    @GetMapping("/create")
-    public String createPage(Model model) {
-        model.addAttribute("order", new Order());
-        return "createOrder";
+    @GetMapping
+    public List<Order> getOrders() {
+        return service.findAll();
     }
 
-    @PostMapping("/create")
-    public String createPost(@ModelAttribute Order order) {
-        service.create(order);
-        return "redirect:/order/list";
-    }
+    @PostMapping
+    public Order createOrder(
+            @RequestParam String userId,
+            @RequestParam double totalPrice) {
 
-    @GetMapping("/list")
-    public String listPage(Model model) {
-        List<Order> orders = service.findAll();
-        model.addAttribute("orders", orders);
-        return "orderList";
+        Order order = new Order();
+        order.setUserId(userId);
+        order.setTotalPrice(totalPrice);
+
+        return service.create(order);
     }
 }

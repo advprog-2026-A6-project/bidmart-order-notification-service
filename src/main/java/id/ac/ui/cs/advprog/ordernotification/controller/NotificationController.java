@@ -2,14 +2,12 @@ package id.ac.ui.cs.advprog.ordernotification.controller;
 
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.service.NotificationService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
-@RequestMapping("/notification")
+@RestController
+@RequestMapping("/api/notifications")
 public class NotificationController {
 
     private final NotificationService service;
@@ -18,10 +16,20 @@ public class NotificationController {
         this.service = service;
     }
 
-    @GetMapping("/list")
-    public String listPage(Model model) {
-        List<Notification> notifications = service.findAll();
-        model.addAttribute("notifications", notifications);
-        return "notificationList";
+    @GetMapping
+    public List<Notification> getNotifications() {
+        return service.findAll();
+    }
+
+    @PostMapping
+    public Notification createNotification(
+            @RequestParam String message,
+            @RequestParam String type) {
+
+        Notification notif = new Notification();
+        notif.setMessage(message);
+        notif.setType(type);
+
+        return service.create(notif);
     }
 }
