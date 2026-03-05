@@ -28,6 +28,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void createOrderNotification(Order order) {
+        if (order == null || order.getId() == null) {
+            return;
+        }
+
         Notification notif = new Notification();
         notif.setMessage("Order dibuat dengan ID: " + order.getId());
         notif.setType("ORDER_CREATED");
