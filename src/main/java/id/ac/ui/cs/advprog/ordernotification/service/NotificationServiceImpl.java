@@ -4,10 +4,12 @@ import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository repository;
