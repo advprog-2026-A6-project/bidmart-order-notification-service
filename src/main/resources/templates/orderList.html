@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Order List</title>
+</head>
+<body>
+
+<h1>Orders</h1>
+
+<button onclick="loadOrders()">Load Orders</button>
+
+<ul id="orders"></ul>
+
+<script>
+
+    function loadOrders() {
+
+        fetch('/api/orders')
+            .then(res => res.json())
+            .then(data => {
+
+                const list = document.getElementById("orders");
+                list.innerHTML = "";
+
+                data.forEach(order => {
+
+                    const li = document.createElement("li");
+
+                    li.innerText =
+                        "ID: " + order.id +
+                        " | User: " + order.userId +
+                        " | Price: " + order.totalPrice +
+                        " | Status: " + order.status;
+
+                    list.appendChild(li);
+                });
+
+            });
+
+    }
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+package id.ac.ui.cs.advprog.ordernotification.service;
+
+import id.ac.ui.cs.advprog.ordernotification.model.Order;
+import id.ac.ui.cs.advprog.ordernotification.repository.OrderRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+
+@Service
+@Transactional
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderRepository orderRepository;
+    private final NotificationService notificationService;
+
+    public OrderServiceImpl(OrderRepository orderRepository,
+                            NotificationService notificationService) {
+        this.orderRepository = orderRepository;
+        this.notificationService = notificationService;
+    }
+
+    @Override
+    public Order create(Order order) {
+        order.setStatus("CREATED");
+        Order savedOrder = orderRepository.save(order);
+        notificationService.createOrderNotification(savedOrder);
+        return savedOrder;
+    }
+
+    @Override
+    public List<Order> findAll() {
+        return orderRepository.findAll();
+    }
+}

@@ -17,10 +17,12 @@
 <ul id="list"></ul>
 
 <script>
+
     function loadNotifications() {
         fetch('/api/notifications')
             .then(res => res.json())
             .then(data => {
+
                 const list = document.getElementById("list");
                 list.innerHTML = "";
 
@@ -29,10 +31,12 @@
                     li.innerText = n.message + " - " + n.type;
                     list.appendChild(li);
                 });
+
             });
     }
 
     function createNotification() {
+
         const message = document.getElementById("message").value;
         const type = document.getElementById("type").value;
 
@@ -41,6 +45,7 @@
         })
             .then(() => loadNotifications());
     }
+
 </script>
 
 </body>
