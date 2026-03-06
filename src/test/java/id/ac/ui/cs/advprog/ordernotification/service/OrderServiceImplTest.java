@@ -29,7 +29,7 @@ class OrderServiceImplTest {
 
         Order savedOrder = new Order();
         savedOrder.setId(1L);
-        savedOrder.setStatus("CREATED"); // 🔥 WAJIB
+        savedOrder.setStatus("CREATED");
 
         when(orderRepository.save(order)).thenReturn(savedOrder);
 

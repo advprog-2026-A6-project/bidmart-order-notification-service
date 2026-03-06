@@ -55,4 +55,10 @@ class NotificationServiceImplTest {
         assertEquals(1, result.size());
         verify(repository).findAll();
     }
+
+    @Test
+    void testCreateOrderNotificationWithNullOrder() {
+        service.createOrderNotification(null);
+        verify(repository, never()).save(any());
+    }
 }

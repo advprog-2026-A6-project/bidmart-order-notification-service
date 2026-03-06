@@ -1,28 +1,52 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="id">
 <head>
-    <title>Notification List</title>
+    <meta charset="UTF-8">
+    <title>Notifications</title>
 </head>
 <body>
 
-<h2>Notifications</h2>
+<h1>Notifications</h1>
 
-<table border="1">
-    <tr>
-        <th>ID</th>
-        <th>Message</th>
-        <th>Type</th>
-    </tr>
+<input type="text" id="message" placeholder="Message">
+<input type="text" id="type" placeholder="Type">
 
-    <tr th:each="notif : ${notifications}">
-        <td th:text="${notif.id}"></td>
-        <td th:text="${notif.message}"></td>
-        <td th:text="${notif.type}"></td>
-    </tr>
-</table>
+<button onclick="createNotification()">Add Notification</button>
+<button onclick="loadNotifications()">Load Notifications</button>
 
-<br>
-<a href="/order/list">Kembali ke Order</a>
+<ul id="list"></ul>
+
+<script>
+
+    function loadNotifications() {
+        fetch('/api/notifications')
+            .then(res => res.json())
+            .then(data => {
+
+                const list = document.getElementById("list");
+                list.innerHTML = "";
+
+                data.forEach(n => {
+                    const li = document.createElement("li");
+                    li.innerText = n.message + " - " + n.type;
+                    list.appendChild(li);
+                });
+
+            });
+    }
+
+    function createNotification() {
+
+        const message = document.getElementById("message").value;
+        const type = document.getElementById("type").value;
+
+        fetch(`/api/notifications?message=${message}&type=${type}`, {
+            method: "POST"
+        })
+            .then(() => loadNotifications());
+    }
+
+</script>
 
 </body>
 </html>

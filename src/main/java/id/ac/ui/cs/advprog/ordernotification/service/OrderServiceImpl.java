@@ -3,10 +3,11 @@ package id.ac.ui.cs.advprog.ordernotification.service;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.repository.OrderRepository;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Transactional
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
@@ -21,12 +22,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Order create(Order order) {
         order.setStatus("CREATED");
-
         Order savedOrder = orderRepository.save(order);
-
-        // 🔥 Integrasi ke Notification
         notificationService.createOrderNotification(savedOrder);
-
         return savedOrder;
     }
 
