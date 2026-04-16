@@ -63,7 +63,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     runtimeOnly("com.h2database:h2")
 
-    compileOnly("com.github.spotbugs:spotbugs-annotations:4.8.6")
+    implementation("com.github.spotbugs:spotbugs-annotations:4.8.6")
 }
 
 tasks.withType<Test> {
