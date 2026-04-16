@@ -1,40 +1,9 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual Order - BidMart</title>
-    <style>
-        :root {
-            --primary: #10b981;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-        }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
-        nav { background: #fff; padding: 1rem 2rem; display: flex; gap: 2rem; border-bottom: 1px solid #e2e8f0; }
-        nav a { text-decoration: none; color: #64748b; font-weight: 500; transition: color 0.2s; }
-        nav a:hover, nav a.active { color: var(--primary); }
-        .container { max-width: 600px; margin: 3rem auto; padding: 0 1rem; }
-        .card { background: var(--card); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        h1 { margin-top: 0; font-size: 1.5rem; color: #065f46; }
-        .form-group { margin-bottom: 1.25rem; }
-        label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
-        input { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
-        button { cursor: pointer; background: var(--primary); color: white; border: none; padding: 0.875rem; border-radius: 8px; font-weight: 600; width: 100%; margin-top: 1rem; transition: background 0.2s; }
-        button:hover { background: #059669; }
-        p { text-align: center; margin-top: 1rem; font-size: 0.875rem; }
-        a.link { color: var(--primary); text-decoration: none; font-weight: 600; }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: common-head('Manual Order')}"></head>
 <body>
 
-<nav>
-    <a href="/orders">Orders</a>
-    <a href="/notifications">Notifications</a>
-    <a href="/preferences">Preferences</a>
-    <a href="/simulate">Simulate</a>
-</nav>
+<nav th:replace="~{fragments/layout :: navbar('simulate')}"></nav>
 
 <div class="container">
     <div class="card">

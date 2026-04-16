@@ -1,41 +1,9 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notifications - BidMart</title>
-    <style>
-        :root {
-            --primary: #f59e0b;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-        }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
-        nav { background: #fff; padding: 1rem 2rem; display: flex; gap: 2rem; border-bottom: 1px solid #e2e8f0; }
-        nav a { text-decoration: none; color: #64748b; font-weight: 500; transition: color 0.2s; }
-        nav a:hover, nav a.active { color: var(--primary); }
-        .container { max-width: 800px; margin: 3rem auto; padding: 0 1rem; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-        h1 { margin: 0; font-size: 1.875rem; color: #78350f; }
-        .filter-group { margin-bottom: 2rem; display: flex; gap: 0.5rem; }
-        input { padding: 0.5rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; flex-grow: 1; }
-        button { cursor: pointer; background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; }
-        .notif-item { background: #fff; padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 1rem; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); display: flex; justify-content: space-between; align-items: flex-start; }
-        .notif-content p { margin: 0.5rem 0 0; font-size: 0.95rem; }
-        .notif-meta { display: flex; gap: 1rem; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-        .type-tag { color: var(--primary); }
-        .pref-tag { color: #64748b; background: #f1f5f9; padding: 0.125rem 0.375rem; border-radius: 4px; }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: common-head('Notifications')}"></head>
 <body>
 
-<nav>
-    <a href="/orders">Orders</a>
-    <a href="/notifications" class="active">Notifications</a>
-    <a href="/preferences">Preferences</a>
-    <a href="/simulate">Simulate</a>
-</nav>
+<nav th:replace="~{fragments/layout :: navbar('notifications')}"></nav>
 
 <div class="container">
     <div class="header">

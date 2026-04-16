@@ -13,10 +13,10 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
-    
+
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public OrderServiceImpl(OrderRepository orderRepository,
-                            NotificationService notificationService) {
+            NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.notificationService = notificationService;
     }
@@ -39,7 +39,7 @@ public class OrderServiceImpl implements OrderService {
         order.setItemName(itemName);
         order.setTotalPrice(totalPrice);
         order.setStatus("AUTOMATIC_CREATED");
-        
+
         Order savedOrder = orderRepository.save(order);
         notificationService.createOrderNotification(savedOrder);
         return savedOrder;

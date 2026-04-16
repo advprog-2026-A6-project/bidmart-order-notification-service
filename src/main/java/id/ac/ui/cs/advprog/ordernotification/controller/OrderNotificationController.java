@@ -18,7 +18,7 @@ public class OrderNotificationController {
 
     private final OrderService orderService;
     private final NotificationService notificationService;
-    
+
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public OrderNotificationController(OrderService orderService, NotificationService notificationService) {
         this.orderService = orderService;
