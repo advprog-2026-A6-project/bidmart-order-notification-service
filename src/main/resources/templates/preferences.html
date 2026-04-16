@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Preferences - BidMart</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        nav { background: #fff; padding: 1rem 2rem; display: flex; gap: 2rem; border-bottom: 1px solid #e2e8f0; }
+        nav a { text-decoration: none; color: #64748b; font-weight: 500; transition: color 0.2s; }
+        nav a:hover, nav a.active { color: var(--primary); }
+        .container { max-width: 600px; margin: 3rem auto; padding: 0 1rem; }
+        .card { background: var(--card); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1 { margin-top: 0; font-size: 1.5rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
+        input[type="text"], input[type="email"] { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
+        .toggle-group { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        button { cursor: pointer; background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; width: 100%; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        #status { margin-top: 1rem; font-size: 0.875rem; text-align: center; }
+        .status-success { color: #10b981; }
+        .status-error { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/orders">Orders</a>
+    <a href="/notifications">Notifications</a>
+    <a href="/preferences" class="active">Preferences</a>
+    <a href="/simulate">Simulate</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h1>Notification Preferences</h1>
+        
+        <div class="form-group">
+            <label for="userId">User ID</label>
+            <input type="text" id="userId" placeholder="Enter your User ID" onchange="loadPreferences()">
+        </div>
+
+        <div id="pref-details" style="display: none;">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="example@domain.com">
+            </div>
+
+            <div class="toggle-group">
+                <input type="checkbox" id="emailEnabled" checked>
+                <label for="emailEnabled">Enable Email Notifications</label>
+            </div>
+
+            <div class="toggle-group">
+                <input type="checkbox" id="pushEnabled" checked>
+                <label for="pushEnabled">Enable Push (Database) Notifications</label>
+            </div>
+
+            <button onclick="savePreferences()">Update Settings</button>
+        </div>
+        
+        <div id="status"></div>
+    </div>
+</div>
+
+<script>
+    function showStatus(msg, isError = false) {
+        const s = document.getElementById("status");
+        s.innerText = msg;
+        s.className = isError ? "status-error" : "status-success";
+        setTimeout(() => s.innerText = "", 3000);
+    }
+
+    function loadPreferences() {
+        const userId = document.getElementById("userId").value;
+        if (!userId) return;
+
+        fetch(`/api/order-notification/preferences/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("email").value = data.email || "";
+                document.getElementById("emailEnabled").checked = data.emailEnabled;
+                document.getElementById("pushEnabled").checked = data.pushEnabled;
+                document.getElementById("pref-details").style.display = "block";
+                showStatus("Preferences loaded.");
+            })
+            .catch(() => {
+                // If not found, show empty but enabled for creation
+                document.getElementById("pref-details").style.display = "block";
+                showStatus("No preferences found, creating new...", true);
+            });
+    }
+
+    function savePreferences() {
+        const userId = document.getElementById("userId").value;
+        const email = document.getElementById("email").value;
+        const emailEnabled = document.getElementById("emailEnabled").checked;
+        const pushEnabled = document.getElementById("pushEnabled").checked;
+
+        fetch(`/api/order-notification/preferences/${userId}?email=${email}&emailEnabled=${emailEnabled}&pushEnabled=${pushEnabled}`, {
+            method: "POST"
+        })
+        .then(res => {
+            if (res.ok) showStatus("Preferences updated successfully!");
+            else showStatus("Failed to update.", true);
+        });
+    }
+</script>
+
+</body>
+</html>

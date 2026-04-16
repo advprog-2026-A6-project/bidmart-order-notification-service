@@ -21,7 +21,23 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order create(Order order) {
-        order.setStatus("CREATED");
+        if (order.getStatus() == null) {
+            order.setStatus("CREATED");
+        }
+        Order savedOrder = orderRepository.save(order);
+        notificationService.createOrderNotification(savedOrder);
+        return savedOrder;
+    }
+
+    @Override
+    public Order createAutomaticOrder(Long auctionId, String userId, String itemName, Double totalPrice) {
+        Order order = new Order();
+        order.setAuctionId(auctionId);
+        order.setUserId(userId);
+        order.setItemName(itemName);
+        order.setTotalPrice(totalPrice);
+        order.setStatus("AUTOMATIC_CREATED");
+        
         Order savedOrder = orderRepository.save(order);
         notificationService.createOrderNotification(savedOrder);
         return savedOrder;

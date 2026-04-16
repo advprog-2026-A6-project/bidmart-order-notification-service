@@ -5,26 +5,20 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-
-import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 @Entity
-@Table(name = "notifications")
-public class Notification {
+@Table(name = "notification_preferences")
+public class NotificationPreference {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true)
     private String userId;
-    private String recipientEmail;
-    private String message;
-    private String type;
-    private String status;
-    private String preferenceType;
+    private String email;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+    private boolean emailEnabled = true;
+    private boolean pushEnabled = true;
 }

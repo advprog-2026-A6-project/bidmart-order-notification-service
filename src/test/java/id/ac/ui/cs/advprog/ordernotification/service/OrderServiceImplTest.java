@@ -40,6 +40,22 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void testCreateOrder_WithExistingStatus() {
+        Order order = new Order();
+        order.setStatus("PRE_EXISTING");
+
+        Order savedOrder = new Order();
+        savedOrder.setStatus("PRE_EXISTING");
+
+        when(orderRepository.save(order)).thenReturn(savedOrder);
+
+        Order result = service.create(order);
+
+        assertEquals("PRE_EXISTING", result.getStatus());
+        verify(notificationService).createOrderNotification(savedOrder);
+    }
+
+    @Test
     void testFindAll() {
         when(orderRepository.findAll()).thenReturn(java.util.List.of(new Order()));
 
