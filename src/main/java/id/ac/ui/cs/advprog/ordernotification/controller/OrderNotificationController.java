@@ -5,6 +5,7 @@ import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.service.NotificationService;
 import id.ac.ui.cs.advprog.ordernotification.service.OrderService;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,8 @@ public class OrderNotificationController {
 
     private final OrderService orderService;
     private final NotificationService notificationService;
-
+    
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public OrderNotificationController(OrderService orderService, NotificationService notificationService) {
         this.orderService = orderService;
         this.notificationService = notificationService;

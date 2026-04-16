@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.ordernotification.service;
 
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.repository.OrderRepository;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -12,7 +13,8 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
-
+    
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public OrderServiceImpl(OrderRepository orderRepository,
                             NotificationService notificationService) {
         this.orderRepository = orderRepository;
