@@ -31,6 +31,8 @@ public class NotificationController {
         Notification notif = new Notification();
         notif.setMessage(message);
         notif.setType(type);
+        notif.setStatus("CREATED");
+        notif.setCreatedAt(java.time.LocalDateTime.now());
 
         return service.create(notif);
     }

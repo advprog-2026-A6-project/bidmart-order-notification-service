@@ -35,6 +35,7 @@ class NotificationServiceImplTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(repository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test

@@ -46,6 +46,19 @@ public class NotificationServiceImpl implements NotificationService {
                 .toList();
     }
 
+    private Notification saveNotification(String userId, String message, String type, 
+                                          String prefType, String status, String recipientEmail) {
+        Notification notif = new Notification();
+        notif.setUserId(userId);
+        notif.setMessage(message);
+        notif.setType(type);
+        notif.setPreferenceType(prefType);
+        notif.setStatus(status);
+        notif.setRecipientEmail(recipientEmail);
+        notif.setCreatedAt(java.time.LocalDateTime.now());
+        return repository.save(notif);
+    }
+
     @Override
     public void createOrderNotification(Order order) {
         if (order == null || order.getId() == null) {
@@ -56,25 +69,12 @@ public class NotificationServiceImpl implements NotificationService {
         String messageBody = "Order #" + order.getId() + " untuk " + order.getItemName() + " telah dibuat.";
 
         if (pref.isPushEnabled()) {
-            Notification notif = new Notification();
-            notif.setUserId(order.getUserId());
-            notif.setMessage(messageBody);
-            notif.setType("ORDER_CREATED");
-            notif.setPreferenceType("PUSH");
-            notif.setStatus("SENT");
-            repository.save(notif);
+            saveNotification(order.getUserId(), messageBody, "ORDER_CREATED", "PUSH", "SENT", null);
         }
 
         if (pref.getEmail() != null && !pref.getEmail().isEmpty() && pref.isEmailEnabled()) {
-            Notification emailNotif = new Notification();
-            emailNotif.setUserId(order.getUserId());
-            emailNotif.setRecipientEmail(pref.getEmail());
-            emailNotif.setMessage(messageBody);
-            emailNotif.setType("ORDER_CREATED");
-            emailNotif.setPreferenceType("EMAIL");
-            emailNotif.setCreatedAt(java.time.LocalDateTime.now());
-            emailNotif.setStatus("SENDING");
-            repository.save(emailNotif);
+            Notification emailNotif = saveNotification(order.getUserId(), messageBody, "ORDER_CREATED", 
+                                                       "EMAIL", "SENDING", pref.getEmail());
 
             emailService.sendSimpleEmail(
                     pref.getEmail(),
@@ -95,14 +95,8 @@ public class NotificationServiceImpl implements NotificationService {
             emailNotif.setStatus("SENT");
             repository.save(emailNotif);
         } else if (pref.isEmailEnabled()) {
-            Notification errorNotif = new Notification();
-            errorNotif.setUserId(order.getUserId());
-            errorNotif.setMessage("Email GAGAL dikirim: Alamat email belum diatur.");
-            errorNotif.setType("ORDER_CREATED");
-            errorNotif.setPreferenceType("EMAIL_ERROR");
-            errorNotif.setCreatedAt(java.time.LocalDateTime.now());
-            errorNotif.setStatus("FAILED");
-            repository.save(errorNotif);
+            saveNotification(order.getUserId(), "Email GAGAL dikirim: Alamat email belum diatur.", 
+                             "ORDER_CREATED", "EMAIL_ERROR", "FAILED", null);
         }
     }
 
