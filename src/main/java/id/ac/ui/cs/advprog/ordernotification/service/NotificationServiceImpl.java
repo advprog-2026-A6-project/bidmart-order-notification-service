@@ -59,6 +59,8 @@ public class NotificationServiceImpl implements NotificationService {
         return repository.save(notif);
     }
 
+    private static final String NOTIF_TYPE_ORDER_CREATED = "ORDER_CREATED";
+
     @Override
     public void createOrderNotification(Order order) {
         if (order == null || order.getId() == null) {
@@ -69,11 +71,11 @@ public class NotificationServiceImpl implements NotificationService {
         String messageBody = "Order #" + order.getId() + " untuk " + order.getItemName() + " telah dibuat.";
 
         if (pref.isPushEnabled()) {
-            saveNotification(order.getUserId(), messageBody, "ORDER_CREATED", "PUSH", "SENT", null);
+            saveNotification(order.getUserId(), messageBody, NOTIF_TYPE_ORDER_CREATED, "PUSH", "SENT", null);
         }
 
         if (pref.getEmail() != null && !pref.getEmail().isEmpty() && pref.isEmailEnabled()) {
-            Notification emailNotif = saveNotification(order.getUserId(), messageBody, "ORDER_CREATED", 
+            Notification emailNotif = saveNotification(order.getUserId(), messageBody, NOTIF_TYPE_ORDER_CREATED, 
                                                        "EMAIL", "SENDING", pref.getEmail());
 
             emailService.sendSimpleEmail(
@@ -96,7 +98,7 @@ public class NotificationServiceImpl implements NotificationService {
             repository.save(emailNotif);
         } else if (pref.isEmailEnabled()) {
             saveNotification(order.getUserId(), "Email GAGAL dikirim: Alamat email belum diatur.", 
-                             "ORDER_CREATED", "EMAIL_ERROR", "FAILED", null);
+                             NOTIF_TYPE_ORDER_CREATED, "EMAIL_ERROR", "FAILED", null);
         }
     }
 
