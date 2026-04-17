@@ -1,51 +1,54 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Notifications</title>
+<head th:replace="~{fragments/layout :: common-head('Notifications')}">
+    <title>Notifications - BidMart</title>
 </head>
 <body>
 
-<h1>Notifications</h1>
+<nav th:replace="~{fragments/layout :: navbar('notifications')}"></nav>
 
-<input type="text" id="message" placeholder="Message">
-<input type="text" id="type" placeholder="Type">
+<div class="container">
+    <div class="header">
+        <h1>Notifications</h1>
+    </div>
 
-<button onclick="createNotification()">Add Notification</button>
-<button onclick="loadNotifications()">Load Notifications</button>
-
-<ul id="list"></ul>
+    <div class="filter-group">
+        <input type="text" id="userIdInput" placeholder="Enter User ID to view history...">
+        <button onclick="loadNotifications()">Search</button>
+    </div>
+    
+    <div id="list">
+        <!-- Records will appear here -->
+        <p style="text-align: center; color: #94a3b8;">Enter a User ID to see their notification history.</p>
+    </div>
+</div>
 
 <script>
-
     function loadNotifications() {
-        fetch('/api/notifications')
+        const userId = document.getElementById("userIdInput").value;
+        if (!userId) return;
+
+        fetch(`/api/order-notification/notifications/${userId}`)
             .then(res => res.json())
             .then(data => {
-
                 const list = document.getElementById("list");
-                list.innerHTML = "";
+                list.innerHTML = data.length === 0 ? `<p style="text-align: center; color: #94a3b8;">No notifications found for user "${userId}".</p>` : "";
 
-                data.forEach(n => {
-                    const li = document.createElement("li");
-                    li.innerText = n.message + " - " + n.type;
-                    list.appendChild(li);
+                data.reverse().forEach(n => {
+                    const item = document.createElement("div");
+                    item.className = "notif-item";
+                    item.innerHTML = `
+                        <div class="notif-content">
+                            <div class="notif-meta">
+                                <span class="type-tag">${n.type}</span>
+                                <span class="pref-tag">${n.preferenceType}</span>
+                                <span>Status: ${n.status}</span>
+                            </div>
+                            <p>${n.message}</p>
+                        </div>
+                    `;
+                    list.appendChild(item);
                 });
-
             });
     }
-
-    function createNotification() {
-
-        const message = document.getElementById("message").value;
-        const type = document.getElementById("type").value;
-
-        fetch(`/api/notifications?message=${message}&type=${type}`, {
-            method: "POST"
-        })
-            .then(() => loadNotifications());
-    }
-
 </script>
 
 </body>

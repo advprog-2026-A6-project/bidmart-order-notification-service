@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="common-head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - BidMart'"></title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+</head>
+<body>
+
+<nav th:fragment="navbar(activePage)">
+    <a href="/orders" th:class="${activePage == 'orders' ? 'active' : ''}">Orders</a>
+    <a href="/notifications" th:class="${activePage == 'notifications' ? 'active' : ''}">Notifications</a>
+    <a href="/preferences" th:class="${activePage == 'preferences' ? 'active' : ''}">Preferences</a>
+    <a href="/simulate" th:class="${activePage == 'simulate' ? 'active' : ''}">Simulate</a>
+</nav>
+
+</body>
+</html>

@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.ordernotification.controller;
 
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.service.NotificationService;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,7 +12,8 @@ import java.util.List;
 public class NotificationController {
 
     private final NotificationService service;
-
+    
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public NotificationController(NotificationService service) {
         this.service = service;
     }
@@ -29,6 +31,8 @@ public class NotificationController {
         Notification notif = new Notification();
         notif.setMessage(message);
         notif.setType(type);
+        notif.setStatus("CREATED");
+        notif.setCreatedAt(java.time.LocalDateTime.now());
 
         return service.create(notif);
     }

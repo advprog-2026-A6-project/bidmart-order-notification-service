@@ -1,45 +1,52 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Order List</title>
+<head th:replace="~{fragments/layout :: common-head('Orders')}">
+    <title>Orders - BidMart</title>
 </head>
 <body>
 
-<h1>Orders</h1>
+<nav th:replace="~{fragments/layout :: navbar('orders')}"></nav>
 
-<button onclick="loadOrders()">Load Orders</button>
-
-<ul id="orders"></ul>
+<div class="container">
+    <div class="header">
+        <h1>Orders</h1>
+        <button class="btn-refresh" onclick="loadOrders()">Refresh List</button>
+    </div>
+    
+    <div id="orders" class="grid">
+        <!-- Records will appear here -->
+    </div>
+</div>
 
 <script>
-
     function loadOrders() {
-
-        fetch('/api/orders')
+        fetch('/api/order-notification/orders') // Using the API endpoint from OrderNotificationController
             .then(res => res.json())
             .then(data => {
-
                 const list = document.getElementById("orders");
-                list.innerHTML = "";
+                list.innerHTML = data.length === 0 ? "<p>No orders found.</p>" : "";
 
-                data.forEach(order => {
-
-                    const li = document.createElement("li");
-
-                    li.innerText =
-                        "ID: " + order.id +
-                        " | User: " + order.userId +
-                        " | Price: " + order.totalPrice +
-                        " | Status: " + order.status;
-
-                    list.appendChild(li);
+                data.reverse().forEach(o => {
+                    const card = document.createElement("div");
+                    card.className = "order-card";
+                    
+                    const isAuto = o.status === "AUTOMATIC_CREATED";
+                    
+                    card.innerHTML = `
+                        <div class="order-info">
+                            <h3>${o.itemName || 'Unnamed Item'}</h3>
+                            <p>User ID: ${o.userId} | Auction ID: ${o.auctionId || 'N/A'}</p>
+                            <p><strong>$${o.totalPrice.toLocaleString()}</strong></p>
+                        </div>
+                        <span class="status-badge ${isAuto ? 'status-auto' : 'status-created'}">
+                            ${o.status}
+                        </span>
+                    `;
+                    list.appendChild(card);
                 });
-
             });
-
     }
 
+    // Auto load
+    loadOrders();
 </script>
 
 </body>

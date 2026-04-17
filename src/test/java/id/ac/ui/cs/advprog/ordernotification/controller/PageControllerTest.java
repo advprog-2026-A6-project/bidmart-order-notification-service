@@ -37,4 +37,25 @@ class PageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("notificationList"));
     }
+
+    @Test
+    void testHomePage() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("orderList"));
+    }
+
+    @Test
+    void testPreferencesPage() throws Exception {
+        mockMvc.perform(get("/preferences"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("preferences"));
+    }
+
+    @Test
+    void testSimulatePage() throws Exception {
+        mockMvc.perform(get("/simulate"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auctionFinish"));
+    }
 }
