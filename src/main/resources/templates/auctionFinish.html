@@ -1,0 +1,103 @@
+<head th:replace="~{fragments/layout :: common-head('Auction Simulation')}">
+    <title>Auction Simulation - BidMart</title>
+</head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('simulate')}"></nav>
+
+<div class="container">
+    <div class="card">
+        <h1>Auction Finish Simulation</h1>
+        <p>Trigger an automatic order and notification as if an auction just ended.</p>
+        
+        <div class="form-group">
+            <label for="auctionId">Auction ID</label>
+            <input type="number" id="auctionId" value="101">
+        </div>
+
+        <div class="form-group">
+            <label for="winnerId">Winner ID (User ID)</label>
+            <input type="text" id="winnerId" placeholder="e.g. user123">
+        </div>
+
+        <div class="form-group">
+            <label for="itemName">Item Name</label>
+            <input type="text" id="itemName" value="MacBook Pro M3">
+        </div>
+
+        <div class="form-group">
+            <label for="finalPrice">Final Price</label>
+            <input type="number" id="finalPrice" value="2500.0">
+        </div>
+
+        <button onclick="simulate()">Trigger Auction Finish</button>
+        
+        <div id="debug-info" style="margin-top: 1rem; font-size: 0.8rem; color: #ef4444; display: none;">
+            ⚠️ <strong>Peringatan:</strong> User ID ini belum mengatur email di halaman Preferences. Email tidak akan terkirim.
+        </div>
+
+        <pre id="output"></pre>
+    </div>
+</div>
+
+<script>
+    function checkUser() {
+        const userId = document.getElementById("winnerId").value;
+        const debug = document.getElementById("debug-info");
+        if (!userId) {
+            debug.style.display = "none";
+            return;
+        }
+
+        fetch(`/api/order-notification/preferences/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.email || !data.emailEnabled) {
+                    debug.style.display = "block";
+                    debug.style.color = "#f59e0b";
+                    debug.innerHTML = "⚠️ <strong>Info:</strong> User ditemukan, tapi Email dimatikan atau belum diisi.";
+                } else {
+                    debug.style.display = "block";
+                    debug.style.color = "#10b981";
+                    debug.innerHTML = "✅ <strong>Siap:</strong> Email akan dikirim ke: " + data.email;
+                }
+            })
+            .catch(() => {
+                debug.style.display = "block";
+                debug.style.color = "#ef4444";
+                debug.innerHTML = "❌ <strong>Error:</strong> User ID ini belum terdaftar di Preferences. Email akan gagal.";
+            });
+    }
+
+    // Bind event
+    document.getElementById("winnerId").addEventListener("input", checkUser);
+
+    function simulate() {
+        const payload = {
+            auctionId: document.getElementById("auctionId").value,
+            winnerId: document.getElementById("winnerId").value,
+            itemName: document.getElementById("itemName").value,
+            finalPrice: document.getElementById("finalPrice").value
+        };
+
+        const out = document.getElementById("output");
+        out.style.display = "block";
+        out.innerText = "Processing...";
+
+        fetch('/api/order-notification/auction-finish', {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            out.innerText = "Success! Automatic Order Created:\n" + JSON.stringify(data, null, 2);
+        })
+        .catch(err => {
+            out.innerText = "Error: " + err.message;
+        });
+    }
+</script>
+
+</body>
+</html>

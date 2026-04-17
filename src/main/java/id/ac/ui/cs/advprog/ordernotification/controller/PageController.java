@@ -25,4 +25,14 @@ public class PageController {
     public String notificationsPage() {
         return "notificationList";
     }
+
+    @GetMapping("/preferences")
+    public String preferencesPage() {
+        return "preferences";
+    }
+
+    @GetMapping("/simulate")
+    public String simulatePage() {
+        return "auctionFinish";
+    }
 }

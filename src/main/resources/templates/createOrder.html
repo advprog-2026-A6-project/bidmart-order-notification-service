@@ -1,55 +1,50 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Create Order</title>
+<head th:replace="~{fragments/layout :: common-head('Manual Order')}">
+    <title>Manual Order - BidMart</title>
 </head>
 <body>
 
-<h1>Create Order</h1>
+<nav th:replace="~{fragments/layout :: navbar('simulate')}"></nav>
 
-<input type="text" id="userId" placeholder="User ID">
-<input type="number" id="totalPrice" placeholder="Total Price">
+<div class="container">
+    <div class="card">
+        <h1>Manual Order Creation</h1>
+        
+        <div class="form-group">
+            <label for="userId">User ID</label>
+            <input type="text" id="userId" placeholder="Enter User ID">
+        </div>
 
-<button onclick="createOrder()">Create Order</button>
-<button onclick="loadOrders()">Load Orders</button>
+        <div class="form-group">
+            <label for="totalPrice">Total Price</label>
+            <input type="number" id="totalPrice" placeholder="0.00">
+        </div>
 
-<ul id="orders"></ul>
+        <button onclick="createOrder()">Create Order</button>
+        
+        <p>Looking for Auction Simulation? <a href="/simulate" class="link">Go to Simulator</a></p>
+    </div>
+</div>
 
 <script>
-
-    function loadOrders() {
-        fetch('/api/orders')
-            .then(res => res.json())
-            .then(data => {
-
-                const list = document.getElementById("orders");
-                list.innerHTML = "";
-
-                data.forEach(o => {
-                    const li = document.createElement("li");
-                    li.innerText =
-                        "ID: " + o.id +
-                        " | User: " + o.userId +
-                        " | Price: " + o.totalPrice +
-                        " | Status: " + o.status;
-
-                    list.appendChild(li);
-                });
-            });
-    }
-
     function createOrder() {
-
         const userId = document.getElementById("userId").value;
         const totalPrice = document.getElementById("totalPrice").value;
 
-        fetch(`/api/orders?userId=${userId}&totalPrice=${totalPrice}`, {
-            method: "POST"
-        })
-            .then(() => loadOrders());
-    }
+        if (!userId || !totalPrice) return alert("Please fill all fields");
 
+        fetch(`/api/order-notification/orders`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `userId=${userId}&totalPrice=${totalPrice}`
+        })
+        .then(res => {
+            if (res.ok) {
+                globalThis.location.href = "/orders";
+            } else {
+                alert("Failed to create order");
+            }
+        });
+    }
 </script>
 
 </body>

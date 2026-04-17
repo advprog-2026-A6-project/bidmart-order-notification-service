@@ -1,0 +1,85 @@
+<head th:replace="~{fragments/layout :: common-head('Notification Preferences')}">
+    <title>Notification Preferences - BidMart</title>
+</head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('preferences')}"></nav>
+
+<div class="container">
+    <div class="card">
+        <h1>Notification Preferences</h1>
+        
+        <div class="form-group">
+            <label for="userId">User ID</label>
+            <input type="text" id="userId" placeholder="Enter your User ID" onchange="loadPreferences()">
+        </div>
+
+        <div id="pref-details" style="display: none;">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="example@domain.com">
+            </div>
+
+            <div class="toggle-group">
+                <input type="checkbox" id="emailEnabled" checked>
+                <label for="emailEnabled">Enable Email Notifications</label>
+            </div>
+
+            <div class="toggle-group">
+                <input type="checkbox" id="pushEnabled" checked>
+                <label for="pushEnabled">Enable Push (Database) Notifications</label>
+            </div>
+
+            <button onclick="savePreferences()">Update Settings</button>
+        </div>
+        
+        <div id="status"></div>
+    </div>
+</div>
+
+<script>
+    function showStatus(msg, isError = false) {
+        const s = document.getElementById("status");
+        s.innerText = msg;
+        s.className = isError ? "status-error" : "status-success";
+        setTimeout(() => s.innerText = "", 3000);
+    }
+
+    function loadPreferences() {
+        const userId = document.getElementById("userId").value;
+        if (!userId) return;
+
+        fetch(`/api/order-notification/preferences/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("email").value = data.email || "";
+                document.getElementById("emailEnabled").checked = data.emailEnabled;
+                document.getElementById("pushEnabled").checked = data.pushEnabled;
+                document.getElementById("pref-details").style.display = "block";
+                showStatus("Preferences loaded.");
+            })
+            .catch(() => {
+                // If not found, show empty but enabled for creation
+                document.getElementById("pref-details").style.display = "block";
+                showStatus("No preferences found, creating new...", true);
+            });
+    }
+
+    function savePreferences() {
+        const userId = document.getElementById("userId").value;
+        const email = document.getElementById("email").value;
+        const emailEnabled = document.getElementById("emailEnabled").checked;
+        const pushEnabled = document.getElementById("pushEnabled").checked;
+
+        fetch(`/api/order-notification/preferences/${userId}?email=${email}&emailEnabled=${emailEnabled}&pushEnabled=${pushEnabled}`, {
+            method: "POST"
+        })
+        .then(res => {
+            if (res.ok) showStatus("Preferences updated successfully!");
+            else showStatus("Failed to update.", true);
+        });
+    }
+</script>
+
+</body>
+</html>

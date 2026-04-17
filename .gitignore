@@ -33,5 +33,8 @@ out/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
+# VS Code
 .vscode/
+
+# Project specific
+test_output*.txt
