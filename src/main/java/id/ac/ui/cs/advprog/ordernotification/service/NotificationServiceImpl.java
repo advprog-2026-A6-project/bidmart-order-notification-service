@@ -5,8 +5,10 @@ import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationPreferenceRepository;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.List;
 
@@ -17,13 +19,17 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository repository;
     private final NotificationPreferenceRepository preferenceRepository;
     private final EmailService emailService;
+    private final SimpMessagingTemplate messagingTemplate;
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public NotificationServiceImpl(NotificationRepository repository,
             NotificationPreferenceRepository preferenceRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            SimpMessagingTemplate messagingTemplate) {
         this.repository = repository;
         this.preferenceRepository = preferenceRepository;
         this.emailService = emailService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Override
@@ -72,6 +78,8 @@ public class NotificationServiceImpl implements NotificationService {
 
         if (pref.isPushEnabled()) {
             saveNotification(order.getUserId(), messageBody, NOTIF_TYPE_ORDER_CREATED, "PUSH", "SENT", null);
+            // Send WebSocket notification
+            messagingTemplate.convertAndSend("/topic/notifications/" + order.getUserId(), messageBody);
         }
 
         if (pref.getEmail() != null && !pref.getEmail().isEmpty() && pref.isEmailEnabled()) {
@@ -122,5 +130,14 @@ public class NotificationServiceImpl implements NotificationService {
                     defaultPref.setUserId(userId);
                     return defaultPref;
                 });
+    }
+
+    @Override
+    public void sendNotification(String userId, String message, String type) {
+        NotificationPreference pref = getPreference(userId);
+        if (pref.isPushEnabled()) {
+            saveNotification(userId, message, type, "PUSH", "SENT", null);
+            messagingTemplate.convertAndSend("/topic/notifications/" + userId, message);
+        }
     }
 }
