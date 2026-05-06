@@ -16,10 +16,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         config.setApplicationDestinationPrefixes("/app");
     }
 
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:3000,http://localhost:8080}")
+    private String[] allowedOrigins;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS();
     }
 }
