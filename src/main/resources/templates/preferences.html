@@ -1,85 +1,154 @@
-<head th:replace="~{fragments/layout :: common-head('Notification Preferences')}">
-    <title>Notification Preferences - BidMart</title>
+<!DOCTYPE html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: common-head('Pengaturan Notifikasi')}">
+    <title>Pengaturan Notifikasi - BidMart</title>
 </head>
+<style>
+    .pref-card {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    .switch-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 16px;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border);
+    }
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #cbd5e1;
+        transition: .4s;
+        border-radius: 34px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px; width: 18px;
+        left: 4px; bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(24px); }
+</style>
 <body>
 
 <nav th:replace="~{fragments/layout :: navbar('preferences')}"></nav>
 
 <div class="container">
-    <div class="card">
-        <h1>Notification Preferences</h1>
+    <div class="pref-card card animate-fade">
+        <h2 style="text-align: center; margin-bottom: 0.5rem;">Pengaturan Notifikasi</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Pilih bagaimana Anda ingin menerima pembaruan dari BidMart.</p>
         
         <div class="form-group">
-            <label for="userId">User ID</label>
-            <input type="text" id="userId" placeholder="Enter your User ID" onchange="loadPreferences()">
+            <label for="userId">User ID (Simulasi Login)</label>
+            <input type="text" id="userId" placeholder="Masukkan User ID Anda..." onchange="loadPreferences()">
         </div>
 
-        <div id="pref-details" style="display: none;">
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" placeholder="example@domain.com">
-            </div>
+        <div class="form-group">
+            <label for="email">Alamat Email</label>
+            <input type="email" id="email" placeholder="nama@email.com">
+        </div>
 
-            <div class="toggle-group">
+        <div class="switch-group">
+            <div>
+                <div style="font-weight: 700;">Notifikasi Email</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Kirim konfirmasi pesanan ke email.</div>
+            </div>
+            <label class="switch">
                 <input type="checkbox" id="emailEnabled" checked>
-                <label for="emailEnabled">Enable Email Notifications</label>
-            </div>
-
-            <div class="toggle-group">
-                <input type="checkbox" id="pushEnabled" checked>
-                <label for="pushEnabled">Enable Push (Database) Notifications</label>
-            </div>
-
-            <button onclick="savePreferences()">Update Settings</button>
+                <span class="slider"></span>
+            </label>
         </div>
-        
-        <div id="status"></div>
+
+        <div class="switch-group">
+            <div>
+                <div style="font-weight: 700;">Push Notification (Browser)</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Tampilkan pop-up saat Anda aktif.</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="pushEnabled" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <button onclick="savePreferences()" style="margin-top: 1rem;">
+            <ion-icon name="save-outline"></ion-icon> Simpan Perubahan
+        </button>
     </div>
 </div>
 
 <script>
-    function showStatus(msg, isError = false) {
-        const s = document.getElementById("status");
-        s.innerText = msg;
-        s.className = isError ? "status-error" : "status-success";
-        setTimeout(() => s.innerText = "", 3000);
-    }
-
     function loadPreferences() {
-        const userId = document.getElementById("userId").value;
+        const userId = document.getElementById('userId').value;
         if (!userId) return;
+        
+        localStorage.setItem('bidmart_user_id', userId);
+        // Reconnect websocket if userId changed
+        if (typeof connectWebSocket === 'function') connectWebSocket(userId);
 
         fetch(`/api/order-notification/preferences/${userId}`)
             .then(res => res.json())
             .then(data => {
-                document.getElementById("email").value = data.email || "";
-                document.getElementById("emailEnabled").checked = data.emailEnabled;
-                document.getElementById("pushEnabled").checked = data.pushEnabled;
-                document.getElementById("pref-details").style.display = "block";
-                showStatus("Preferences loaded.");
-            })
-            .catch(() => {
-                // If not found, show empty but enabled for creation
-                document.getElementById("pref-details").style.display = "block";
-                showStatus("No preferences found, creating new...", true);
+                document.getElementById('email').value = data.email || '';
+                document.getElementById('emailEnabled').checked = data.emailEnabled;
+                document.getElementById('pushEnabled').checked = data.pushEnabled;
+                showToast("Data preferensi dimuat untuk user: " + userId);
             });
     }
 
     function savePreferences() {
-        const userId = document.getElementById("userId").value;
-        const email = document.getElementById("email").value;
-        const emailEnabled = document.getElementById("emailEnabled").checked;
-        const pushEnabled = document.getElementById("pushEnabled").checked;
+        const userId = document.getElementById('userId').value;
+        if (!userId) {
+            alert("Silakan masukkan User ID terlebih dahulu!");
+            return;
+        }
 
-        fetch(`/api/order-notification/preferences/${userId}?email=${email}&emailEnabled=${emailEnabled}&pushEnabled=${pushEnabled}`, {
-            method: "POST"
-        })
-        .then(res => {
-            if (res.ok) showStatus("Preferences updated successfully!");
-            else showStatus("Failed to update.", true);
+        const email = document.getElementById('email').value;
+        const emailEnabled = document.getElementById('emailEnabled').checked;
+        const pushEnabled = document.getElementById('pushEnabled').checked;
+
+        const params = new URLSearchParams();
+        params.append('email', email);
+        params.append('emailEnabled', emailEnabled);
+        params.append('pushEnabled', pushEnabled);
+
+        fetch(`/api/order-notification/preferences/${userId}`, {
+            method: 'POST',
+            body: params
+        }).then(res => {
+            if (res.ok) {
+                showToast("Preferensi berhasil disimpan!", "success");
+            } else {
+                showToast("Gagal menyimpan preferensi.", "error");
+            }
         });
     }
+
+    // Load initial userId if exists
+    document.addEventListener('DOMContentLoaded', () => {
+        const storedId = localStorage.getItem('bidmart_user_id');
+        if (storedId) {
+            document.getElementById('userId').value = storedId;
+            loadPreferences();
+        }
+    });
 </script>
 
+<div th:replace="~{fragments/layout :: footer-scripts}"></div>
 </body>
 </html>

@@ -13,4 +13,5 @@ public interface NotificationService {
     void createOrderNotification(Order order);
     NotificationPreference setPreference(String userId, String email, boolean emailEnabled, boolean pushEnabled);
     NotificationPreference getPreference(String userId);
+    void sendNotification(String userId, String message, String type);
 }

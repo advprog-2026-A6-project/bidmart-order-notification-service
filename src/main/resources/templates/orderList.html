@@ -1,53 +1,351 @@
-<head th:replace="~{fragments/layout :: common-head('Orders')}">
-    <title>Orders - BidMart</title>
+<!DOCTYPE html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: common-head('Daftar Pesanan')}">
+    <title>Daftar Pesanan - BidMart</title>
 </head>
+<style>
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+    }
+
+    .order-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 2rem; 
+    }
+
+    .order-card { 
+        background: var(--card); 
+        backdrop-filter: blur(12px);
+        border-radius: 24px; 
+        padding: 2rem; 
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .order-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary);
+    }
+
+    .order-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 6px;
+        background: linear-gradient(to right, var(--primary), var(--secondary));
+    }
+
+    .status-badge {
+        padding: 6px 14px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .status-completed { background: #dcfce7; color: #166534; }
+    .status-shipped { background: #e0f2fe; color: #075985; }
+    .status-automatic_created { background: #fef9c3; color: #854d0e; }
+    .status-created { background: #f1f5f9; color: #475569; }
+
+    .price-container {
+        margin: 1.5rem 0;
+        padding: 1rem;
+        background: rgba(99, 102, 241, 0.05);
+        border-radius: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .price-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+
+    .tracking-section {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 1.25rem;
+        border: 1px dashed #cbd5e1;
+        margin-top: 1rem;
+    }
+    
+    .role-switcher {
+        background: white;
+        padding: 6px;
+        border-radius: 14px;
+        display: inline-flex;
+        gap: 4px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .role-btn {
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+    }
+    
+    .role-btn.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 5rem 2rem;
+        background: var(--card);
+        border-radius: 30px;
+        border: 2px dashed #cbd5e1;
+    }
+</style>
 <body>
 
 <nav th:replace="~{fragments/layout :: navbar('orders')}"></nav>
 
 <div class="container">
-    <div class="header">
-        <h1>Orders</h1>
-        <button class="btn-refresh" onclick="loadOrders()">Refresh List</button>
+    <div class="header-section">
+        <div>
+            <h1 class="animate-fade">Daftar Pesanan</h1>
+            <p style="color: var(--text-muted); margin-top: -0.5rem;">Kelola riwayat transaksi lelang Anda.</p>
+        </div>
+        <button class="btn-outline" style="width: auto;" onclick="loadOrders()">
+            <ion-icon name="refresh-outline"></ion-icon> Refresh
+        </button>
+    </div>
+
+    <!-- Simulator Role Switcher -->
+    <div style="text-align: center;">
+        <div class="role-switcher">
+            <button id="btn-seller" class="role-btn active" onclick="setRole('seller')">Mode Penjual</button>
+            <button id="btn-buyer" class="role-btn" onclick="setRole('buyer')">Mode Pembeli</button>
+        </div>
+        <p id="role-desc" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2rem;">
+            Sebagai <b>Penjual</b>, Anda bisa menginput nomor resi untuk mengirim barang.
+        </p>
     </div>
     
-    <div id="orders" class="grid">
-        <!-- Records will appear here -->
+    <div id="orders" class="order-grid">
+        <!-- Records loaded via JS -->
     </div>
 </div>
 
 <script>
+    let currentRole = 'seller';
+
+    function setRole(role) {
+        currentRole = role;
+        document.getElementById('btn-seller').classList.toggle('active', role === 'seller');
+        document.getElementById('btn-buyer').classList.toggle('active', role === 'buyer');
+        
+        const desc = document.getElementById('role-desc');
+        if (role === 'seller') {
+            desc.innerHTML = "Sebagai <b>Penjual</b>, Anda bisa menginput nomor resi untuk mengirim barang.";
+        } else {
+            desc.innerHTML = "Sebagai <b>Pembeli</b>, Anda bisa mengonfirmasi penerimaan barang setelah paket sampai.";
+        }
+        loadOrders();
+    }
+
     function loadOrders() {
-        fetch('/api/order-notification/orders') // Using the API endpoint from OrderNotificationController
+        const list = document.getElementById("orders");
+        list.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; padding:5rem;">
+                <ion-icon name="sync-outline" style="font-size: 3rem; color: var(--primary); animation: rotate 2s linear infinite;"></ion-icon>
+                <p style="margin-top: 1rem; font-weight: 600;">Memuat data pesanan...</p>
+            </div>`;
+
+        fetch('/api/order-notification/orders')
             .then(res => res.json())
             .then(data => {
-                const list = document.getElementById("orders");
-                list.innerHTML = data.length === 0 ? "<p>No orders found.</p>" : "";
+                if (data.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1/-1;">
+                            <ion-icon name="cart-outline" style="font-size: 4rem; color: #cbd5e1;"></ion-icon>
+                            <h3 style="margin-top: 1rem; color: var(--text-muted);">Belum ada pesanan</h3>
+                            <p style="color: #94a3b8;">Transaksi lelang Anda akan muncul di sini.</p>
+                        </div>`;
+                    return;
+                }
 
-                data.reverse().forEach(o => {
+                list.innerHTML = "";
+                data.reverse().forEach((o, index) => {
                     const card = document.createElement("div");
-                    card.className = "order-card";
+                    card.className = "order-card animate-fade";
+                    card.style.animationDelay = (index * 0.1) + "s";
                     
-                    const isAuto = o.status === "AUTOMATIC_CREATED";
+                    const hasTracking = o.trackingNumber && o.trackingNumber.trim() !== "";
+                    const isCompleted = o.status === 'COMPLETED';
+                    const isShipped = o.status === 'SHIPPED';
                     
+                    let actionHtml = '';
+                    
+                    if (currentRole === 'seller') {
+                        if (!isCompleted) {
+                            actionHtml = `
+                                <div id="display-${o.id}">
+                                    <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">NOMOR RESI</div>
+                                    <div style="color: ${hasTracking ? '#059669' : '#94a3b8'}; font-weight: 800; font-size: 1.25rem; margin-bottom: 12px;">
+                                        ${o.trackingNumber || 'BELUM DIINPUT'}
+                                    </div>
+                                    <button onclick="toggleEdit(${o.id})">
+                                        <ion-icon name="create-outline"></ion-icon> ${hasTracking ? 'Update Resi' : 'Input Resi'}
+                                    </button>
+                                </div>
+                                <div id="edit-form-${o.id}" style="display: none;">
+                                    <input type="text" id="resi-input-${o.id}" value="${o.trackingNumber || ''}" placeholder="Contoh: JNE12345678" style="margin-bottom: 10px;">
+                                    <div style="display: flex; gap: 8px;">
+                                        <button onclick="submitTracking(${o.id})">Simpan</button>
+                                        <button class="btn-outline" onclick="toggleEdit(${o.id})">Batal</button>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            actionHtml = `
+                                <div style="text-align: center; color: #059669;">
+                                    <ion-icon name="checkmark-done-circle" style="font-size: 2rem;"></ion-icon>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">TRANSAKSI SELESAI</div>
+                                    <div style="font-size: 0.8rem; opacity: 0.8;">Resi: ${o.trackingNumber}</div>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        // Buyer Role
+                        if (isShipped) {
+                            actionHtml = `
+                                <div style="text-align: center;">
+                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">PESANAN TELAH DIKIRIM</div>
+                                    <div style="font-weight: 800; color: var(--primary); font-size: 1.1rem; margin-bottom: 15px;">Resi: ${o.trackingNumber}</div>
+                                    <button style="background: #10b981;" onclick="confirmOrder(${o.id})">
+                                        <ion-icon name="checkmark-circle-outline"></ion-icon> Konfirmasi Terima Barang
+                                    </button>
+                                </div>
+                            `;
+                        } else if (isCompleted) {
+                            actionHtml = `
+                                <div style="text-align: center; color: #059669;">
+                                    <ion-icon name="heart-circle" style="font-size: 2rem;"></ion-icon>
+                                    <div style="font-weight: 700; font-size: 0.9rem;">BARANG TELAH DITERIMA</div>
+                                    <p style="font-size: 0.8rem;">Terima kasih telah berbelanja!</p>
+                                </div>
+                            `;
+                        } else {
+                            actionHtml = `
+                                <div style="text-align: center; color: #64748b; padding: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px;">
+                                    <ion-icon name="hourglass-outline" style="font-size: 1.5rem;"></ion-icon>
+                                    <div style="font-size: 0.8rem;">Menunggu Penjual mengirim barang...</div>
+                                </div>
+                            `;
+                        }
+                    }
+
                     card.innerHTML = `
-                        <div class="order-info">
-                            <h3>${o.itemName || 'Unnamed Item'}</h3>
-                            <p>User ID: ${o.userId} | Auction ID: ${o.auctionId || 'N/A'}</p>
-                            <p><strong>$${o.totalPrice.toLocaleString()}</strong></p>
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text);">${o.itemName || 'Barang Tanpa Nama'}</h3>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">ORDER ID: #${o.id}</div>
+                            </div>
+                            <span class="status-badge status-${o.status.toLowerCase()}">${o.status.replace('_', ' ')}</span>
                         </div>
-                        <span class="status-badge ${isAuto ? 'status-auto' : 'status-created'}">
-                            ${o.status}
-                        </span>
+
+                        <div class="price-container">
+                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">TOTAL HARGA</span>
+                            <span class="price-value">Rp${o.totalPrice.toLocaleString('id-ID')}</span>
+                        </div>
+
+                        <div class="tracking-section">
+                            ${actionHtml}
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; font-size: 0.7rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+                            <ion-icon name="time-outline"></ion-icon> Dibuat pada: ${new Date(o.createdAt).toLocaleString('id-ID')}
+                        </div>
                     `;
                     list.appendChild(card);
                 });
             });
     }
 
-    // Auto load
+    function toggleEdit(id) {
+        const form = document.getElementById(`edit-form-${id}`);
+        const display = document.getElementById(`display-${id}`);
+        if (form.style.display === "none") {
+            form.style.display = "block";
+            display.style.display = "none";
+        } else {
+            form.style.display = "none";
+            display.style.display = "block";
+        }
+    }
+
+    function submitTracking(orderId) {
+        const input = document.getElementById(`resi-input-${orderId}`);
+        const trackingNumber = input.value.trim();
+        
+        if (!trackingNumber) {
+            showToast("Masukkan nomor resi terlebih dahulu!", "error");
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.append('trackingNumber', trackingNumber);
+
+        fetch(`/api/order-notification/orders/${orderId}/tracking`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        }).then(res => {
+            if (res.ok) {
+                showToast("Resi berhasil dikirim! Pembeli telah dinotifikasi.", "success");
+                loadOrders();
+            } else {
+                showToast("Gagal memperbarui resi.", "error");
+            }
+        });
+    }
+
+    function confirmOrder(orderId) {
+        if (!confirm("Apakah Anda yakin sudah menerima barang dengan baik?")) return;
+
+        fetch(`/api/order-notification/orders/${orderId}/confirm`, {
+            method: 'POST'
+        }).then(res => {
+            if (res.ok) {
+                showToast("Terima kasih! Pesanan telah selesai.", "success");
+                loadOrders();
+            } else {
+                showToast("Gagal mengonfirmasi pesanan.", "error");
+            }
+        });
+    }
+
+    // Auto-refresh via Event
+    document.addEventListener('new-notification', (e) => {
+        console.log("New notification received, refreshing orders...");
+        loadOrders();
+    });
+
     loadOrders();
 </script>
 
+<style>
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<div th:replace="~{fragments/layout :: footer-scripts}"></div>
 </body>
 </html>

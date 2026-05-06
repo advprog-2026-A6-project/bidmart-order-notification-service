@@ -5,12 +5,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor
 @Entity
 @Table(name = "orders")
+@SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 public class Order {
 
     @Id
@@ -22,6 +24,7 @@ public class Order {
     private String itemName;
     private Double totalPrice;
     private String status;
+    private String trackingNumber;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

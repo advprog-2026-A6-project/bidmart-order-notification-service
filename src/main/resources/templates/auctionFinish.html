@@ -1,103 +1,163 @@
-<head th:replace="~{fragments/layout :: common-head('Auction Simulation')}">
-    <title>Auction Simulation - BidMart</title>
+<!DOCTYPE html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: common-head('Simulasi Lelang Selesai')}">
+    <title>Simulasi Lelang - BidMart</title>
 </head>
+<style>
+    .sim-card {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .preview-box {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border: 1px solid var(--border);
+    }
+    .preview-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+    .preview-label { color: var(--text-muted); font-weight: 500; }
+    .preview-value { font-weight: 700; color: var(--text); }
+</style>
 <body>
 
 <nav th:replace="~{fragments/layout :: navbar('simulate')}"></nav>
 
 <div class="container">
-    <div class="card">
-        <h1>Auction Finish Simulation</h1>
-        <p>Trigger an automatic order and notification as if an auction just ended.</p>
+    <div class="sim-card card animate-fade">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <ion-icon name="flash-outline" style="font-size: 3rem; color: var(--accent);"></ion-icon>
+            <h2>Simulator Auction Finish</h2>
+            <p style="color: var(--text-muted);">Gunakan halaman ini untuk mensimulasikan kejadian saat lelang berakhir dan pemenang ditentukan.</p>
+        </div>
+
+        <div class="form-group">
+            <label>Pilih Barang Contoh</label>
+            <select id="item-preset" onchange="applyPreset()">
+                <option value="custom">-- Custom --</option>
+                <option value="laptop">MacBook Pro M2</option>
+                <option value="phone">iPhone 15 Pro Max</option>
+                <option value="camera">Sony A7 IV</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="itemName">Nama Barang</label>
+            <input type="text" id="itemName" placeholder="Contoh: Kursi Gaming">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="finalPrice">Harga Final (Rp)</label>
+                <input type="number" id="finalPrice" value="1500000">
+            </div>
+            <div class="form-group">
+                <label for="winnerId">Winner User ID</label>
+                <input type="text" id="winnerId" value="49">
+            </div>
+        </div>
+
+        <div class="preview-box">
+            <div style="font-weight: 800; font-size: 0.8rem; margin-bottom: 1rem; color: var(--primary);">PREVIEW EVENT</div>
+            <div class="preview-item">
+                <span class="preview-label">Event Type:</span>
+                <span class="preview-value" style="color: var(--secondary);">WinnerDetermined</span>
+            </div>
+            <div class="preview-item">
+                <span class="preview-label">Target Module:</span>
+                <span class="preview-value">Order & Notification</span>
+            </div>
+        </div>
+
+        <button onclick="triggerAuctionFinish()" style="background: var(--text);">
+            <ion-icon name="play-circle-outline"></ion-icon> Trigger Auction Finish
+        </button>
         
-        <div class="form-group">
-            <label for="auctionId">Auction ID</label>
-            <input type="number" id="auctionId" value="101">
+        <div id="result" style="margin-top: 1.5rem; display: none;" class="animate-fade">
+            <div style="padding: 1rem; background: #dcfce7; color: #166534; border-radius: 12px; font-weight: 600; text-align: center;">
+                <ion-icon name="checkmark-circle"></ion-icon> Berhasil! Order otomatis telah dibuat.
+            </div>
+            <pre id="json-output" style="background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 12px; font-size: 0.8rem; margin-top: 10px; overflow-x: auto;"></pre>
         </div>
-
-        <div class="form-group">
-            <label for="winnerId">Winner ID (User ID)</label>
-            <input type="text" id="winnerId" placeholder="e.g. user123">
-        </div>
-
-        <div class="form-group">
-            <label for="itemName">Item Name</label>
-            <input type="text" id="itemName" value="MacBook Pro M3">
-        </div>
-
-        <div class="form-group">
-            <label for="finalPrice">Final Price</label>
-            <input type="number" id="finalPrice" value="2500.0">
-        </div>
-
-        <button onclick="simulate()">Trigger Auction Finish</button>
-        
-        <div id="debug-info" style="margin-top: 1rem; font-size: 0.8rem; color: #ef4444; display: none;">
-            ⚠️ <strong>Peringatan:</strong> User ID ini belum mengatur email di halaman Preferences. Email tidak akan terkirim.
-        </div>
-
-        <pre id="output"></pre>
     </div>
 </div>
 
 <script>
-    function checkUser() {
-        const userId = document.getElementById("winnerId").value;
-        const debug = document.getElementById("debug-info");
-        if (!userId) {
-            debug.style.display = "none";
-            return;
-        }
+    const presets = {
+        laptop: { name: "MacBook Pro M2", price: 25000000 },
+        phone: { name: "iPhone 15 Pro Max", price: 21000000 },
+        camera: { name: "Sony A7 IV", price: 32000000 }
+    };
 
-        fetch(`/api/order-notification/preferences/${userId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (!data.email || !data.emailEnabled) {
-                    debug.style.display = "block";
-                    debug.style.color = "#f59e0b";
-                    debug.innerHTML = "⚠️ <strong>Info:</strong> User ditemukan, tapi Email dimatikan atau belum diisi.";
-                } else {
-                    debug.style.display = "block";
-                    debug.style.color = "#10b981";
-                    debug.innerHTML = "✅ <strong>Siap:</strong> Email akan dikirim ke: " + data.email;
-                }
-            })
-            .catch(() => {
-                debug.style.display = "block";
-                debug.style.color = "#ef4444";
-                debug.innerHTML = "❌ <strong>Error:</strong> User ID ini belum terdaftar di Preferences. Email akan gagal.";
-            });
+    function applyPreset() {
+        const val = document.getElementById('item-preset').value;
+        if (presets[val]) {
+            document.getElementById('itemName').value = presets[val].name;
+            document.getElementById('finalPrice').value = presets[val].price;
+        }
     }
 
-    // Bind event
-    document.getElementById("winnerId").addEventListener("input", checkUser);
+    function triggerAuctionFinish() {
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<ion-icon name="sync-outline" class="rotate"></ion-icon> Processing...';
 
-    function simulate() {
         const payload = {
-            auctionId: document.getElementById("auctionId").value,
-            winnerId: document.getElementById("winnerId").value,
-            itemName: document.getElementById("itemName").value,
-            finalPrice: document.getElementById("finalPrice").value
+            auctionId: Math.floor(Math.random() * 1000),
+            winnerId: document.getElementById('winnerId').value,
+            itemName: document.getElementById('itemName').value,
+            finalPrice: document.getElementById('finalPrice').value
         };
 
-        const out = document.getElementById("output");
-        out.style.display = "block";
-        out.innerText = "Processing...";
-
         fetch('/api/order-notification/auction-finish', {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
         .then(res => res.json())
         .then(data => {
-            out.innerText = "Success! Automatic Order Created:\n" + JSON.stringify(data, null, 2);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('json-output').innerText = JSON.stringify(data, null, 2);
+            showToast("Success! Order created automatically.", "success");
         })
         .catch(err => {
-            out.innerText = "Error: " + err.message;
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            alert("Gagal memicu event.");
         });
     }
+
+    // Set default item name if empty
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!document.getElementById('itemName').value) {
+            document.getElementById('itemName').value = "Kursi Gaming";
+        }
+        
+        // Sync winnerId with current simulation user if exists
+        const storedId = localStorage.getItem('bidmart_user_id');
+        if (storedId) {
+            document.getElementById('winnerId').value = storedId;
+        }
+    });
 </script>
 
+<style>
+    .rotate { animation: rotate 1s linear infinite; }
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<div th:replace="~{fragments/layout :: footer-scripts}"></div>
 </body>
 </html>

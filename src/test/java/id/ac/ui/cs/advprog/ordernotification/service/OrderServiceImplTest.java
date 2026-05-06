@@ -5,6 +5,7 @@ import id.ac.ui.cs.advprog.ordernotification.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,5 +64,73 @@ class OrderServiceImplTest {
 
         assertEquals(1, result.size());
         verify(orderRepository).findAll();
+    }
+
+    @Test
+    void testFindById() {
+        Order order = new Order();
+        order.setId(1L);
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.of(order));
+
+        Order result = service.findById(1L);
+
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+    }
+
+    @Test
+    void testFindById_NotFound() {
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        Order result = service.findById(1L);
+
+        assertNull(result);
+    }
+
+    @Test
+    void testUpdateTrackingNumber() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setUserId("user1");
+        order.setItemName("Item A");
+
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Order result = service.updateTrackingNumber(1L, "RESI123");
+
+        assertEquals("RESI123", result.getTrackingNumber());
+        assertEquals("SHIPPED", result.getStatus());
+        verify(notificationService).sendNotification(eq("user1"), anyString(), eq("ORDER_SHIPPED"));
+    }
+
+    @Test
+    void testUpdateTrackingNumber_NotFound() {
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> service.updateTrackingNumber(1L, "RESI123"));
+    }
+
+    @Test
+    void testConfirmReceipt() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setUserId("user1");
+        order.setItemName("Item A");
+
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Order result = service.confirmReceipt(1L);
+
+        assertEquals("COMPLETED", result.getStatus());
+        verify(notificationService).sendNotification(eq("user1"), anyString(), eq("ORDER_COMPLETED"));
+    }
+
+    @Test
+    void testConfirmReceipt_NotFound() {
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> service.confirmReceipt(1L));
     }
 }
