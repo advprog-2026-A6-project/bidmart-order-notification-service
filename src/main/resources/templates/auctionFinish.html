@@ -37,7 +37,7 @@
         </div>
 
         <div class="form-group">
-            <label>Pilih Barang Contoh</label>
+            <label for="item-preset">Pilih Barang Contoh</label>
             <select id="item-preset" onchange="applyPreset()">
                 <option value="custom">-- Custom --</option>
                 <option value="laptop">MacBook Pro M2</option>
@@ -109,7 +109,7 @@
         btn.innerHTML = '<ion-icon name="sync-outline" class="rotate"></ion-icon> Processing...';
 
         const payload = {
-            auctionId: Math.floor(Math.random() * 1000),
+            auctionId: window.crypto.getRandomValues(new Uint32Array(1))[0] % 1000,
             winnerId: document.getElementById('winnerId').value,
             itemName: document.getElementById('itemName').value,
             finalPrice: document.getElementById('finalPrice').value

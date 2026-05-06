@@ -158,6 +158,68 @@
         loadOrders();
     }
 
+    function buildActionHtml(o, role, hasTracking, isCompleted, isShipped) {
+        if (role === 'seller') {
+            if (isCompleted) {
+                return `
+                    <div style="text-align: center; color: #059669;">
+                        <ion-icon name="checkmark-done-circle" style="font-size: 2rem;"></ion-icon>
+                        <div style="font-weight: 700; font-size: 0.9rem;">TRANSAKSI SELESAI</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">Resi: ${o.trackingNumber}</div>
+                    </div>
+                `;
+            }
+            return `
+                <div id="display-${o.id}">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">NOMOR RESI</div>
+                    <div style="color: ${hasTracking ? '#059669' : '#94a3b8'}; font-weight: 800; font-size: 1.25rem; margin-bottom: 12px;">
+                        ${o.trackingNumber || 'BELUM DIINPUT'}
+                    </div>
+                    <button onclick="toggleEdit(${o.id})">
+                        <ion-icon name="create-outline"></ion-icon> ${hasTracking ? 'Update Resi' : 'Input Resi'}
+                    </button>
+                </div>
+                <div id="edit-form-${o.id}" style="display: none;">
+                    <input type="text" id="resi-input-${o.id}" value="${o.trackingNumber || ''}" placeholder="Contoh: JNE12345678" style="margin-bottom: 10px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="submitTracking(${o.id})">Simpan</button>
+                        <button class="btn-outline" onclick="toggleEdit(${o.id})">Batal</button>
+                    </div>
+                </div>
+            `;
+        } 
+        
+        // Buyer Role
+        if (isCompleted) {
+            return `
+                <div style="text-align: center; color: #059669;">
+                    <ion-icon name="heart-circle" style="font-size: 2rem;"></ion-icon>
+                    <div style="font-weight: 700; font-size: 0.9rem;">BARANG TELAH DITERIMA</div>
+                    <p style="font-size: 0.8rem;">Terima kasih telah berbelanja!</p>
+                </div>
+            `;
+        }
+        
+        if (isShipped) {
+            return `
+                <div style="text-align: center;">
+                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">PESANAN TELAH DIKIRIM</div>
+                    <div style="font-weight: 800; color: var(--primary); font-size: 1.1rem; margin-bottom: 15px;">Resi: ${o.trackingNumber}</div>
+                    <button style="background: #10b981;" onclick="confirmOrder(${o.id})">
+                        <ion-icon name="checkmark-circle-outline"></ion-icon> Konfirmasi Terima Barang
+                    </button>
+                </div>
+            `;
+        }
+        
+        return `
+            <div style="text-align: center; color: #64748b; padding: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px;">
+                <ion-icon name="hourglass-outline" style="font-size: 1.5rem;"></ion-icon>
+                <div style="font-size: 0.8rem;">Menunggu Penjual mengirim barang...</div>
+            </div>
+        `;
+    }
+
     function loadOrders() {
         const list = document.getElementById("orders");
         list.innerHTML = `
@@ -189,66 +251,7 @@
                     const isCompleted = o.status === 'COMPLETED';
                     const isShipped = o.status === 'SHIPPED';
                     
-                    let actionHtml = '';
-                    
-                    if (currentRole === 'seller') {
-                        if (!isCompleted) {
-                            actionHtml = `
-                                <div id="display-${o.id}">
-                                    <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">NOMOR RESI</div>
-                                    <div style="color: ${hasTracking ? '#059669' : '#94a3b8'}; font-weight: 800; font-size: 1.25rem; margin-bottom: 12px;">
-                                        ${o.trackingNumber || 'BELUM DIINPUT'}
-                                    </div>
-                                    <button onclick="toggleEdit(${o.id})">
-                                        <ion-icon name="create-outline"></ion-icon> ${hasTracking ? 'Update Resi' : 'Input Resi'}
-                                    </button>
-                                </div>
-                                <div id="edit-form-${o.id}" style="display: none;">
-                                    <input type="text" id="resi-input-${o.id}" value="${o.trackingNumber || ''}" placeholder="Contoh: JNE12345678" style="margin-bottom: 10px;">
-                                    <div style="display: flex; gap: 8px;">
-                                        <button onclick="submitTracking(${o.id})">Simpan</button>
-                                        <button class="btn-outline" onclick="toggleEdit(${o.id})">Batal</button>
-                                    </div>
-                                </div>
-                            `;
-                        } else {
-                            actionHtml = `
-                                <div style="text-align: center; color: #059669;">
-                                    <ion-icon name="checkmark-done-circle" style="font-size: 2rem;"></ion-icon>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">TRANSAKSI SELESAI</div>
-                                    <div style="font-size: 0.8rem; opacity: 0.8;">Resi: ${o.trackingNumber}</div>
-                                </div>
-                            `;
-                        }
-                    } else {
-                        // Buyer Role
-                        if (isShipped) {
-                            actionHtml = `
-                                <div style="text-align: center;">
-                                    <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">PESANAN TELAH DIKIRIM</div>
-                                    <div style="font-weight: 800; color: var(--primary); font-size: 1.1rem; margin-bottom: 15px;">Resi: ${o.trackingNumber}</div>
-                                    <button style="background: #10b981;" onclick="confirmOrder(${o.id})">
-                                        <ion-icon name="checkmark-circle-outline"></ion-icon> Konfirmasi Terima Barang
-                                    </button>
-                                </div>
-                            `;
-                        } else if (isCompleted) {
-                            actionHtml = `
-                                <div style="text-align: center; color: #059669;">
-                                    <ion-icon name="heart-circle" style="font-size: 2rem;"></ion-icon>
-                                    <div style="font-weight: 700; font-size: 0.9rem;">BARANG TELAH DITERIMA</div>
-                                    <p style="font-size: 0.8rem;">Terima kasih telah berbelanja!</p>
-                                </div>
-                            `;
-                        } else {
-                            actionHtml = `
-                                <div style="text-align: center; color: #64748b; padding: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px;">
-                                    <ion-icon name="hourglass-outline" style="font-size: 1.5rem;"></ion-icon>
-                                    <div style="font-size: 0.8rem;">Menunggu Penjual mengirim barang...</div>
-                                </div>
-                            `;
-                        }
-                    }
+                    const actionHtml = buildActionHtml(o, currentRole, hasTracking, isCompleted, isShipped);
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
