@@ -3,6 +3,7 @@
 <head th:replace="~{fragments/layout :: common-head('Pengaturan Notifikasi')}">
     <title>Pengaturan Notifikasi - BidMart</title>
 </head>
+<body>
 <style>
     .pref-card {
         max-width: 500px;
@@ -45,7 +46,6 @@
     input:checked + .slider { background-color: var(--primary); }
     input:checked + .slider:before { transform: translateX(24px); }
 </style>
-<body>
 
 <nav th:replace="~{fragments/layout :: navbar('preferences')}"></nav>
 
