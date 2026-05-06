@@ -49,4 +49,36 @@ public class OrderServiceImpl implements OrderService {
     public List<Order> findAll() {
         return orderRepository.findAll();
     }
+
+    @Override
+    public Order findById(Long id) {
+        return orderRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    public Order updateTrackingNumber(Long id, String trackingNumber) {
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        order.setTrackingNumber(trackingNumber);
+        order.setStatus("SHIPPED");
+        Order savedOrder = orderRepository.save(order);
+        
+        // Notify user about shipment
+        String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah dikirim dengan nomor resi: " + trackingNumber;
+        notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_SHIPPED");
+        
+        return savedOrder;
+    }
+
+    @Override
+    public Order confirmReceipt(Long id) {
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        order.setStatus("COMPLETED");
+        Order savedOrder = orderRepository.save(order);
+        
+        // Notify buyer that order is complete
+        String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah selesai. Terima kasih!";
+        notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_COMPLETED");
+        
+        return savedOrder;
+    }
 }

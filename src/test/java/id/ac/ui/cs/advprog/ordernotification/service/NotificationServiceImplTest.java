@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class NotificationServiceImplTest {
@@ -28,6 +28,9 @@ class NotificationServiceImplTest {
 
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @InjectMocks
     private NotificationServiceImpl service;
@@ -61,6 +64,8 @@ class NotificationServiceImplTest {
         verify(repository, atLeastOnce()).save(argThat(n -> "EMAIL".equals(n.getPreferenceType())));
         // Verify email service called
         verify(emailService).sendSimpleEmail(eq("test@example.com"), anyString(), anyString());
+        // Verify WebSocket message sent
+        verify(messagingTemplate).convertAndSend(eq("/topic/notifications/user123"), anyString());
     }
 
     @Test
@@ -245,5 +250,39 @@ class NotificationServiceImplTest {
 
         assertEquals("SENT", result.getStatus());
         verify(repository).save(notif);
+    }
+
+    @Test
+    void testSendNotification() {
+        String userId = "user1";
+        String message = "Hello World";
+        String type = "TEST_TYPE";
+
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId(userId);
+        pref.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId(userId)).thenReturn(Optional.of(pref));
+
+        service.sendNotification(userId, message, type);
+
+        verify(repository).save(any(Notification.class));
+        verify(messagingTemplate).convertAndSend(eq("/topic/notifications/" + userId), eq(message));
+    }
+
+    @Test
+    void testSendNotification_PushDisabled() {
+        String userId = "user1";
+        
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId(userId);
+        pref.setPushEnabled(false);
+
+        when(preferenceRepository.findByUserId(userId)).thenReturn(Optional.of(pref));
+
+        service.sendNotification(userId, "Message", "TYPE");
+
+        verify(repository, never()).save(any());
+        verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
     }
 }

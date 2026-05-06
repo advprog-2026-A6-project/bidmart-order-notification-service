@@ -26,6 +26,12 @@
         const userId = document.getElementById("userIdInput").value;
         if (!userId) return;
 
+        // Save for real-time connection
+        localStorage.setItem('bidmart_user_id', userId);
+        if (typeof connectWebSocket === 'function') {
+            connectWebSocket(userId);
+        }
+
         fetch(`/api/order-notification/notifications/${userId}`)
             .then(res => res.json())
             .then(data => {
@@ -49,7 +55,22 @@
                 });
             });
     }
+
+    // Refresh list if a new notification arrives while on this page
+    document.addEventListener('new-notification', () => {
+        loadNotifications();
+    });
+
+    // Auto-load if userId exists
+    document.addEventListener('DOMContentLoaded', () => {
+        const storedUserId = localStorage.getItem('bidmart_user_id');
+        if (storedUserId) {
+            document.getElementById("userIdInput").value = storedUserId;
+            loadNotifications();
+        }
+    });
 </script>
 
+    <div th:replace="~{fragments/layout :: footer-scripts}"></div>
 </body>
 </html>

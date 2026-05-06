@@ -6,12 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 @Entity
 @Table(name = "notifications")
+@SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 public class Notification {
 
     @Id

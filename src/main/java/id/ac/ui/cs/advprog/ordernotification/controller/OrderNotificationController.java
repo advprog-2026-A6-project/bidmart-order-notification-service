@@ -60,4 +60,16 @@ public class OrderNotificationController {
     public ResponseEntity<List<Notification>> getUserNotifications(@PathVariable String userId) {
         return ResponseEntity.ok(notificationService.findByUserId(userId));
     }
+
+    @PostMapping("/orders/{id}/tracking")
+    public ResponseEntity<Order> updateTracking(
+            @PathVariable Long id,
+            @RequestParam String trackingNumber) {
+        return ResponseEntity.ok(orderService.updateTrackingNumber(id, trackingNumber));
+    }
+
+    @PostMapping("/orders/{id}/confirm")
+    public ResponseEntity<Order> confirmReceipt(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.confirmReceipt(id));
+    }
 }

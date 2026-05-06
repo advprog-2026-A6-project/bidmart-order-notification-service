@@ -8,4 +8,7 @@ public interface OrderService {
     Order create(Order order);
     Order createAutomaticOrder(Long auctionId, String userId, String itemName, Double totalPrice);
     List<Order> findAll();
+    Order findById(Long id);
+    Order updateTrackingNumber(Long id, String trackingNumber);
+    Order confirmReceipt(Long id);
 }
