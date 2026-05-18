@@ -106,4 +106,13 @@ class OrderNotificationControllerTest {
 
         verify(orderService).confirmReceipt(1L);
     }
+
+    @Test
+    void testSubmitDispute() throws Exception {
+        mockMvc.perform(post("/api/order-notification/orders/1/dispute")
+                .param("reason", "Barang palsu"))
+                .andExpect(status().isOk());
+
+        verify(orderService).submitDispute(1L, "Barang palsu");
+    }
 }

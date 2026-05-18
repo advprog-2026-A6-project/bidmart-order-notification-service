@@ -2,6 +2,8 @@ package id.ac.ui.cs.advprog.ordernotification;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 
 @SpringBootTest(
         properties = {
@@ -13,6 +15,9 @@ import org.springframework.boot.test.context.SpringBootTest;
         }
 )
 class OrderNotificationApplicationTests {
+
+    @MockBean
+    private ConnectionFactory connectionFactory;
 
     @Test
     void contextLoads() {
