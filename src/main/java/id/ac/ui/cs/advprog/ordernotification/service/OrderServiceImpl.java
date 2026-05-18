@@ -11,6 +11,8 @@ import java.util.List;
 @Transactional
 public class OrderServiceImpl implements OrderService {
 
+    private static final String ORDER_NOT_FOUND_MSG = "Order not found";
+
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
 
@@ -57,7 +59,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order updateTrackingNumber(Long id, String trackingNumber) {
-        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException(ORDER_NOT_FOUND_MSG));
         order.setTrackingNumber(trackingNumber);
         order.setStatus("SHIPPED");
         Order savedOrder = orderRepository.save(order);
@@ -71,7 +73,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order confirmReceipt(Long id) {
-        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException(ORDER_NOT_FOUND_MSG));
         order.setStatus("COMPLETED");
         Order savedOrder = orderRepository.save(order);
         
@@ -84,7 +86,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order submitDispute(Long id, String reason) {
-        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException(ORDER_NOT_FOUND_MSG));
         order.setDisputeReason(reason);
         order.setDisputeStatus("OPEN");
         order.setStatus("DISPUTED");

@@ -2,9 +2,11 @@ package id.ac.ui.cs.advprog.ordernotification.service;
 
 import id.ac.ui.cs.advprog.ordernotification.config.RabbitMQConfig;
 import id.ac.ui.cs.advprog.ordernotification.model.AuctionFinishedMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class AuctionFinishedListener {
 
@@ -16,7 +18,7 @@ public class AuctionFinishedListener {
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void handleAuctionFinished(AuctionFinishedMessage message) {
-        System.out.println("Received RabbitMQ Message: Auction Finished for " + message.getItemName());
+        log.info("Received RabbitMQ Message: Auction Finished for {}", message.getItemName());
         orderService.createAutomaticOrder(
                 message.getAuctionId(),
                 message.getWinnerId(),
