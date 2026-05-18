@@ -51,9 +51,9 @@ jobs:
 
           ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "sudo tee /etc/bidmart/order-notification.env > /dev/null" << ENVEOF
           SPRING_PROFILES_ACTIVE=prod
-          SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
-          SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_DATASOURCE_URL=${{ secrets.SUPABASE_DB_URL }}
+          SPRING_DATASOURCE_USERNAME=${{ secrets.SUPABASE_DB_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD=${{ secrets.SUPABASE_DB_PASSWORD }}
           SPRING_MAIL_PASSWORD=${{ secrets.SPRING_MAIL_PASSWORD }}
           SPRING_RABBITMQ_HOST=${{ secrets.SPRING_RABBITMQ_HOST }}
           SPRING_RABBITMQ_PORT=${{ secrets.SPRING_RABBITMQ_PORT }}
