@@ -133,4 +133,29 @@ class OrderServiceImplTest {
 
         assertThrows(RuntimeException.class, () -> service.confirmReceipt(1L));
     }
+
+    @Test
+    void testSubmitDispute() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setUserId("user1");
+        order.setItemName("Item A");
+
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Order result = service.submitDispute(1L, "Barang rusak");
+
+        assertEquals("DISPUTED", result.getStatus());
+        assertEquals("OPEN", result.getDisputeStatus());
+        assertEquals("Barang rusak", result.getDisputeReason());
+        verify(notificationService).sendNotification(eq("user1"), anyString(), eq("ORDER_DISPUTED"));
+    }
+
+    @Test
+    void testSubmitDispute_NotFound() {
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> service.submitDispute(1L, "Barang rusak"));
+    }
 }

@@ -1,0 +1,71 @@
+name: Deploy Order Notification Service to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - feature/order-notification
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Build Spring Boot JAR
+        run: ./gradlew clean bootJar -x test
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Upload JAR to EC2
+        run: |
+          scp -i ~/.ssh/ec2_key.pem \
+            build/libs/bidmart-order-notification-service-0.0.1-SNAPSHOT.jar \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/app.jar
+
+      - name: Deploy and restart service
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            sudo mkdir -p /opt/bidmart-order-notification-service &&
+            sudo mv /tmp/app.jar /opt/bidmart-order-notification-service/app.jar &&
+            sudo chown -R ubuntu:ubuntu /opt/bidmart-order-notification-service &&
+            sudo mkdir -p /etc/bidmart
+          "
+
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "sudo tee /etc/bidmart/order-notification.env > /dev/null" << ENVEOF
+          SPRING_PROFILES_ACTIVE=prod
+          SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_MAIL_PASSWORD=${{ secrets.SPRING_MAIL_PASSWORD }}
+          SPRING_RABBITMQ_HOST=${{ secrets.SPRING_RABBITMQ_HOST }}
+          SPRING_RABBITMQ_PORT=${{ secrets.SPRING_RABBITMQ_PORT }}
+          SPRING_RABBITMQ_USERNAME=${{ secrets.SPRING_RABBITMQ_USERNAME }}
+          SPRING_RABBITMQ_PASSWORD=${{ secrets.SPRING_RABBITMQ_PASSWORD }}
+          SPRING_RABBITMQ_VHOST=${{ secrets.SPRING_RABBITMQ_VHOST }}
+          SERVER_PORT=8085
+          ENVEOF
+
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            sudo chmod 600 /etc/bidmart/order-notification.env &&
+            sudo systemctl daemon-reload &&
+            sudo systemctl restart bidmart-order-notification-service &&
+            sudo systemctl status bidmart-order-notification-service --no-pager
+          "

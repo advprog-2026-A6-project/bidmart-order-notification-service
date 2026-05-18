@@ -11,4 +11,5 @@ public interface OrderService {
     Order findById(Long id);
     Order updateTrackingNumber(Long id, String trackingNumber);
     Order confirmReceipt(Long id);
+    Order submitDispute(Long id, String reason);
 }

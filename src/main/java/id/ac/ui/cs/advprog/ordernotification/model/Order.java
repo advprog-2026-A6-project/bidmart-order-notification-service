@@ -25,6 +25,8 @@ public class Order {
     private Double totalPrice;
     private String status;
     private String trackingNumber;
+    private String disputeReason;
+    private String disputeStatus;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
