@@ -72,4 +72,11 @@ public class OrderNotificationController {
     public ResponseEntity<Order> confirmReceipt(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.confirmReceipt(id));
     }
+
+    @PostMapping("/orders/{id}/dispute")
+    public ResponseEntity<Order> submitDispute(
+            @PathVariable Long id,
+            @RequestParam String reason) {
+        return ResponseEntity.ok(orderService.submitDispute(id, reason));
+    }
 }

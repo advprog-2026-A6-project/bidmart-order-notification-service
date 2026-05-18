@@ -81,4 +81,18 @@ public class OrderServiceImpl implements OrderService {
         
         return savedOrder;
     }
+
+    @Override
+    public Order submitDispute(Long id, String reason) {
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        order.setDisputeReason(reason);
+        order.setDisputeStatus("OPEN");
+        order.setStatus("DISPUTED");
+        Order savedOrder = orderRepository.save(order);
+        
+        String message = "Sengketa untuk pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah diajukan. Kami akan segera memprosesnya.";
+        notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_DISPUTED");
+        
+        return savedOrder;
+    }
 }
