@@ -1,13 +1,17 @@
 package id.ac.ui.cs.advprog.ordernotification.service;
 
+import id.ac.ui.cs.advprog.ordernotification.dto.AuthContactPreferencesDto;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationPreferenceRepository;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.List;
@@ -20,16 +24,22 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationPreferenceRepository preferenceRepository;
     private final EmailService emailService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final RestTemplate restTemplate;
+    private final String authServiceUrl;
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public NotificationServiceImpl(NotificationRepository repository,
             NotificationPreferenceRepository preferenceRepository,
             EmailService emailService,
-            SimpMessagingTemplate messagingTemplate) {
+            SimpMessagingTemplate messagingTemplate,
+            RestTemplate restTemplate,
+            @Value("${service.auth.url:http://35.168.202.46:8081/api/internal/users/}") String authServiceUrl) {
         this.repository = repository;
         this.preferenceRepository = preferenceRepository;
         this.emailService = emailService;
         this.messagingTemplate = messagingTemplate;
+        this.restTemplate = restTemplate;
+        this.authServiceUrl = authServiceUrl;
     }
 
     @Override
@@ -125,11 +135,13 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public NotificationPreference getPreference(String userId) {
         return preferenceRepository.findByUserId(userId)
-                .orElseGet(() -> {
-                    NotificationPreference defaultPref = new NotificationPreference();
-                    defaultPref.setUserId(userId);
-                    return defaultPref;
-                });
+                .orElseGet(() -> fetchPreferenceFromAuth(userId)
+                        .map(preferenceRepository::save)
+                        .orElseGet(() -> {
+                            NotificationPreference defaultPref = new NotificationPreference();
+                            defaultPref.setUserId(userId);
+                            return defaultPref;
+                        }));
     }
 
     @Override
@@ -138,6 +150,28 @@ public class NotificationServiceImpl implements NotificationService {
         if (pref.isPushEnabled()) {
             saveNotification(userId, message, type, "PUSH", "SENT", null);
             messagingTemplate.convertAndSend("/topic/notifications/" + userId, message);
+        }
+    }
+
+    private java.util.Optional<NotificationPreference> fetchPreferenceFromAuth(String userId) {
+        try {
+            AuthContactPreferencesDto authPreference = restTemplate.getForObject(
+                    authServiceUrl + userId + "/contact-preferences",
+                    AuthContactPreferencesDto.class
+            );
+
+            if (authPreference == null) {
+                return java.util.Optional.empty();
+            }
+
+            NotificationPreference preference = new NotificationPreference();
+            preference.setUserId(userId);
+            preference.setEmail(authPreference.getEmail());
+            preference.setEmailEnabled(authPreference.isEmailNotificationsEnabled());
+            preference.setPushEnabled(authPreference.isPushNotificationsEnabled());
+            return java.util.Optional.of(preference);
+        } catch (RestClientException exception) {
+            return java.util.Optional.empty();
         }
     }
 }

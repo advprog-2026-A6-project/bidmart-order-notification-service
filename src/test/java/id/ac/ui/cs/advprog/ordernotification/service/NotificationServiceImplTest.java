@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.ordernotification.service;
 
+import id.ac.ui.cs.advprog.ordernotification.dto.AuthContactPreferencesDto;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +35,9 @@ class NotificationServiceImplTest {
     @Mock
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
+    @Mock
+    private RestTemplate restTemplate;
+
     @InjectMocks
     private NotificationServiceImpl service;
 
@@ -39,6 +45,8 @@ class NotificationServiceImplTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(repository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        ReflectionTestUtils.setField(service, "authServiceUrl", "http://localhost:8081/api/internal/users/");
     }
 
     @Test
@@ -234,10 +242,33 @@ class NotificationServiceImplTest {
     @Test
     void testGetPreference_Default() {
         when(preferenceRepository.findByUserId("unknown")).thenReturn(Optional.empty());
+        when(restTemplate.getForObject(anyString(), eq(AuthContactPreferencesDto.class)))
+                .thenReturn(null);
 
         NotificationPreference result = service.getPreference("unknown");
 
         assertEquals("unknown", result.getUserId());
+    }
+
+    @Test
+    void testGetPreference_FetchesFromAuthWhenMissingLocally() {
+        when(preferenceRepository.findByUserId("42")).thenReturn(Optional.empty());
+        when(restTemplate.getForObject(anyString(), eq(AuthContactPreferencesDto.class)))
+                .thenReturn(new AuthContactPreferencesDto(
+                        42L,
+                        "seller@example.com",
+                        "EMAIL",
+                        true,
+                        false
+                ));
+
+        NotificationPreference result = service.getPreference("42");
+
+        assertEquals("42", result.getUserId());
+        assertEquals("seller@example.com", result.getEmail());
+        assertTrue(result.isEmailEnabled());
+        assertFalse(result.isPushEnabled());
+        verify(preferenceRepository).save(any(NotificationPreference.class));
     }
 
     @Test
