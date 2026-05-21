@@ -38,7 +38,7 @@ public class OrderServiceImpl implements OrderService {
     public Order createAutomaticOrder(Long auctionId, String userId, String itemName, Double totalPrice) {
         if (auctionId != null) {
             Optional<Order> existingOrder = orderRepository.findByAuctionId(auctionId);
-            if (existingOrder != null && existingOrder.isPresent()) {
+            if (existingOrder.isPresent()) {
                 return existingOrder.get();
             }
         }

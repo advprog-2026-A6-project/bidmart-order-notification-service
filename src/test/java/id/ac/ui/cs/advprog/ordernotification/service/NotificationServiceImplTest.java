@@ -9,7 +9,6 @@ import id.ac.ui.cs.advprog.ordernotification.repository.NotificationPreferenceRe
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpMethod;
@@ -39,7 +38,6 @@ class NotificationServiceImplTest {
     @Mock
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
-    @InjectMocks
     private NotificationServiceImpl service;
 
     @Mock
@@ -370,16 +368,6 @@ class NotificationServiceImplTest {
         // The fallback builder should create a notification with status FAILED
         verify(repository, atLeastOnce()).save(argThat(n ->
                 "FAILED".equals(n.getStatus()) && "PUSH".equals(n.getPreferenceType())));
-    }
-
-    @Test
-    void testConstructor_WithNullOptional() {
-        // Test constructor when Optional parameter is null
-        NotificationServiceImpl serviceNullOpt = new NotificationServiceImpl(
-                repository, preferenceRepository, emailService, messagingTemplate, null);
-
-        // Verify service is created with default strategies (should not throw)
-        assertNotNull(serviceNullOpt);
     }
 
     @Test

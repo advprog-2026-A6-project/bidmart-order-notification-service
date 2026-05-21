@@ -17,6 +17,19 @@ import java.util.Map;
 @Component
 public class AuthEventListener {
 
+    private static final String STATUS_SENT = "SENT";
+    private static final String SYSTEM_USER = "system";
+    private static final String SYSTEM_PREFERENCE_TYPE = "SYSTEM";
+    private static final String USER_ID_KEY = "userId";
+    private static final String EMAIL_KEY = "email";
+    private static final String ROLE_NAME_KEY = "roleName";
+    private static final String UNKNOWN_VALUE = "UNKNOWN";
+    private static final String ACCOUNT_DISABLED_EVENT = "auth.event.account_disabled";
+    private static final String USER_ROLE_CHANGED_EVENT = "auth.event.user_role_changed";
+    private static final String ROLE_CREATED_EVENT = "auth.event.role_created";
+    private static final String PERMISSION_CREATED_EVENT = "auth.event.permission_created";
+    private static final String ROLE_PERMISSION_CHANGED_EVENT = "auth.event.role_permission_changed";
+
     private final ObjectMapper objectMapper;
     private final NotificationRepository notificationRepository;
 
@@ -40,40 +53,40 @@ public class AuthEventListener {
     private Notification buildNotification(String routingKey, Map<String, Object> payload) {
         Notification notification = new Notification();
         notification.setType(routingKey);
-        notification.setStatus("SENT");
-        notification.setPreferenceType("SYSTEM");
+        notification.setStatus(STATUS_SENT);
+        notification.setPreferenceType(SYSTEM_PREFERENCE_TYPE);
         notification.setCreatedAt(LocalDateTime.now());
 
-        if ("auth.event.account_disabled".equals(routingKey)) {
-            notification.setUserId(stringValue(payload.get("userId"), "system"));
-            notification.setRecipientEmail(stringValue(payload.get("email"), null));
+        if (ACCOUNT_DISABLED_EVENT.equals(routingKey)) {
+            notification.setUserId(stringValue(payload.get(USER_ID_KEY), SYSTEM_USER));
+            notification.setRecipientEmail(stringValue(payload.get(EMAIL_KEY), null));
             notification.setMessage("Akun dinonaktifkan: " + stringValue(payload.get("reason"), "tanpa alasan"));
             return notification;
         }
 
-        if ("auth.event.user_role_changed".equals(routingKey)) {
-            notification.setUserId(stringValue(payload.get("userId"), "system"));
-            notification.setRecipientEmail(stringValue(payload.get("email"), null));
+        if (USER_ROLE_CHANGED_EVENT.equals(routingKey)) {
+            notification.setUserId(stringValue(payload.get(USER_ID_KEY), SYSTEM_USER));
+            notification.setRecipientEmail(stringValue(payload.get(EMAIL_KEY), null));
             notification.setMessage("Peran pengguna berubah: " + stringValue(payload.get("action"), "UPDATED")
-                    + " " + stringValue(payload.get("roleName"), "UNKNOWN"));
+                    + " " + stringValue(payload.get(ROLE_NAME_KEY), UNKNOWN_VALUE));
             return notification;
         }
 
-        notification.setUserId("system");
+        notification.setUserId(SYSTEM_USER);
         notification.setMessage(buildSystemMessage(routingKey, payload));
         return notification;
     }
 
     private String buildSystemMessage(String routingKey, Map<String, Object> payload) {
         return switch (routingKey) {
-            case "auth.event.role_created" ->
-                    "Role baru dibuat: " + stringValue(payload.get("roleName"), "UNKNOWN");
-            case "auth.event.permission_created" ->
-                    "Permission baru dibuat: " + stringValue(payload.get("permissionName"), "UNKNOWN");
-            case "auth.event.role_permission_changed" ->
+            case ROLE_CREATED_EVENT ->
+                    "Role baru dibuat: " + stringValue(payload.get(ROLE_NAME_KEY), UNKNOWN_VALUE);
+            case PERMISSION_CREATED_EVENT ->
+                    "Permission baru dibuat: " + stringValue(payload.get("permissionName"), UNKNOWN_VALUE);
+            case ROLE_PERMISSION_CHANGED_EVENT ->
                     "Permission role berubah: " + stringValue(payload.get("action"), "UPDATED")
-                            + " " + stringValue(payload.get("permissionName"), "UNKNOWN")
-                            + " pada role " + stringValue(payload.get("roleName"), "UNKNOWN");
+                            + " " + stringValue(payload.get("permissionName"), UNKNOWN_VALUE)
+                            + " pada role " + stringValue(payload.get(ROLE_NAME_KEY), UNKNOWN_VALUE);
             default -> "Auth event diterima";
         };
     }

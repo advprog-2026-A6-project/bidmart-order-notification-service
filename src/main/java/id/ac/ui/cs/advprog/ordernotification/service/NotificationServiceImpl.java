@@ -36,8 +36,6 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository repository;
     private final NotificationPreferenceRepository preferenceRepository;
-    private final EmailService emailService;
-    private final SimpMessagingTemplate messagingTemplate;
     private final List<NotificationDeliveryStrategy> deliveryStrategies;
     private final RestTemplate restTemplate;
     private final String authServiceUrl;
@@ -54,18 +52,16 @@ public class NotificationServiceImpl implements NotificationService {
             SimpMessagingTemplate messagingTemplate,
             Optional<List<NotificationDeliveryStrategy>> deliveryStrategiesOpt,
             RestTemplate restTemplate,
-            @Value("${service.auth.url:http://35.168.202.46:8081/api/internal/users/}") String authServiceUrl,
+            @Value("${service.auth.url:}") String authServiceUrl,
             @Value("${service.auth.internal-token:${AUTH_INTERNAL_SERVICE_TOKEN:bidmart-internal-dev-token}}")
             String authInternalToken) {
         this.repository = repository;
         this.preferenceRepository = preferenceRepository;
-        this.emailService = emailService;
-        this.messagingTemplate = messagingTemplate;
         this.restTemplate = restTemplate;
         this.authServiceUrl = authServiceUrl;
         this.authInternalToken = authInternalToken;
         
-        List<NotificationDeliveryStrategy> strategies = (deliveryStrategiesOpt != null && deliveryStrategiesOpt.isPresent()) 
+        List<NotificationDeliveryStrategy> strategies = deliveryStrategiesOpt.isPresent()
                 ? deliveryStrategiesOpt.get() : Collections.emptyList();
         if (strategies.isEmpty()) {
             this.deliveryStrategies = List.of(
@@ -83,7 +79,7 @@ public class NotificationServiceImpl implements NotificationService {
             SimpMessagingTemplate messagingTemplate,
             Optional<List<NotificationDeliveryStrategy>> deliveryStrategiesOpt) {
         this(repository, preferenceRepository, emailService, messagingTemplate, deliveryStrategiesOpt,
-                null, "http://35.168.202.46:8081/api/internal/users/", "bidmart-internal-dev-token");
+                null, "", "bidmart-internal-dev-token");
     }
 
     @Override
@@ -235,7 +231,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private Optional<NotificationPreference> fetchPreferenceFromAuth(String userId) {
-        if (restTemplate == null) {
+        if (restTemplate == null || authServiceUrl == null || authServiceUrl.isBlank()) {
             return Optional.empty();
         }
 
