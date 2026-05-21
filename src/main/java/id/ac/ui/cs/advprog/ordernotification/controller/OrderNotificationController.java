@@ -6,6 +6,7 @@ import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.service.NotificationService;
 import id.ac.ui.cs.advprog.ordernotification.service.OrderService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,15 +40,24 @@ public class OrderNotificationController {
     @PostMapping("/preferences/{userId}")
     public ResponseEntity<NotificationPreference> updatePreference(
             @PathVariable String userId,
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestParam(required = false) String email,
             @RequestParam boolean emailEnabled,
             @RequestParam boolean pushEnabled) {
+        if (xUserId != null && !xUserId.equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         NotificationPreference pref = notificationService.setPreference(userId, email, emailEnabled, pushEnabled);
         return ResponseEntity.ok(pref);
     }
 
     @GetMapping("/preferences/{userId}")
-    public ResponseEntity<NotificationPreference> getPreference(@PathVariable String userId) {
+    public ResponseEntity<NotificationPreference> getPreference(
+            @PathVariable String userId,
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId) {
+        if (xUserId != null && !xUserId.equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(notificationService.getPreference(userId));
     }
 
@@ -57,7 +67,12 @@ public class OrderNotificationController {
     }
 
     @GetMapping("/notifications/{userId}")
-    public ResponseEntity<List<Notification>> getUserNotifications(@PathVariable String userId) {
+    public ResponseEntity<List<Notification>> getUserNotifications(
+            @PathVariable String userId,
+            @RequestHeader(value = "X-User-Id", required = false) String xUserId) {
+        if (xUserId != null && !xUserId.equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(notificationService.findByUserId(userId));
     }
 

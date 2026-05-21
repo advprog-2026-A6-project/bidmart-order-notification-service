@@ -115,4 +115,42 @@ class OrderNotificationControllerTest {
 
         verify(orderService).submitDispute(1L, "Barang palsu");
     }
+
+    @Test
+    void testGetPreferenceForbidden() throws Exception {
+        mockMvc.perform(get("/api/order-notification/preferences/user123")
+                .header("X-User-Id", "otherUser"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testGetPreferenceAllowed() throws Exception {
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId("user123");
+        pref.setEmail("test@mail.com");
+
+        when(notificationService.getPreference("user123")).thenReturn(pref);
+
+        mockMvc.perform(get("/api/order-notification/preferences/user123")
+                .header("X-User-Id", "user123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("test@mail.com"));
+    }
+
+    @Test
+    void testUpdatePreferenceForbidden() throws Exception {
+        mockMvc.perform(post("/api/order-notification/preferences/user123")
+                .header("X-User-Id", "otherUser")
+                .param("email", "test@mail.com")
+                .param("emailEnabled", "true")
+                .param("pushEnabled", "true"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testGetUserNotificationsForbidden() throws Exception {
+        mockMvc.perform(get("/api/order-notification/notifications/user123")
+                .header("X-User-Id", "otherUser"))
+                .andExpect(status().isForbidden());
+    }
 }
