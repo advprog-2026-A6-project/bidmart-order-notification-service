@@ -87,6 +87,8 @@ if [ "$HEALTHY" = false ]; then
     fi
 
     sudo systemctl status "$SERVICE_NAME" --no-pager || true
+    echo "--- APPLICATION LOGS ---"
+    sudo journalctl -u "$SERVICE_NAME" -n 50 --no-pager
     exit 1
 fi
 
