@@ -2,10 +2,14 @@ package id.ac.ui.cs.advprog.ordernotification.service;
 
 import id.ac.ui.cs.advprog.ordernotification.config.FeatureFlagProperties;
 import id.ac.ui.cs.advprog.ordernotification.dto.AuthContactPreferencesDto;
+import id.ac.ui.cs.advprog.ordernotification.model.AuctionEventMessage;
+import id.ac.ui.cs.advprog.ordernotification.model.AuctionFinishedMessage;
+import id.ac.ui.cs.advprog.ordernotification.model.AuctionParticipant;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.event.WalletNotificationEvent;
+import id.ac.ui.cs.advprog.ordernotification.repository.AuctionParticipantRepository;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationPreferenceRepository;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +24,7 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,6 +50,9 @@ class NotificationServiceImplTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private AuctionParticipantRepository auctionParticipantRepository;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -53,7 +61,12 @@ class NotificationServiceImplTest {
                 preferenceRepository,
                 emailService,
                 messagingTemplate,
-                Optional.empty());
+                Optional.empty(),
+                Optional.of(auctionParticipantRepository),
+                restTemplate,
+                "",
+                "bidmart-internal-dev-token",
+                new FeatureFlagProperties());
         when(repository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -701,5 +714,130 @@ class NotificationServiceImplTest {
                 (LocalDateTime) null);
 
         assertNull(event.getTimestamp());
+    }
+
+    @Test
+    void testCreateAuctionBidNotificationSendsToParticipantsAndSellerExceptBidder() {
+        AuctionEventMessage event = new AuctionEventMessage(
+                1L,
+                "BidPlaced",
+                LocalDateTime.now(),
+                Map.of(
+                        "auctionId", 10,
+                        "sellerId", "seller1",
+                        "itemName", "Laptop",
+                        "bidderId", "bidder2",
+                        "bidAmount", 150000
+                ));
+
+        NotificationPreference bidderPreference = new NotificationPreference();
+        bidderPreference.setUserId("bidder1");
+        bidderPreference.setPushEnabled(true);
+        NotificationPreference sellerPreference = new NotificationPreference();
+        sellerPreference.setUserId("seller1");
+        sellerPreference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("bidder1")).thenReturn(Optional.of(bidderPreference));
+        when(preferenceRepository.findByUserId("seller1")).thenReturn(Optional.of(sellerPreference));
+        when(auctionParticipantRepository.findByAuctionId(10L))
+                .thenReturn(List.of(new AuctionParticipant(10L, "bidder1")));
+        when(auctionParticipantRepository.findByAuctionIdAndUserId(10L, "bidder2"))
+                .thenReturn(Optional.empty());
+        when(auctionParticipantRepository.save(any(AuctionParticipant.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.createAuctionBidNotification(event);
+
+        verify(repository).save(argThat(n ->
+                "bidder1".equals(n.getUserId()) && "AUCTION_BID_PLACED".equals(n.getType())));
+        verify(repository).save(argThat(n ->
+                "seller1".equals(n.getUserId()) && "AUCTION_BID_PLACED".equals(n.getType())));
+        verify(repository, never()).save(argThat(n -> "bidder2".equals(n.getUserId())));
+        verify(messagingTemplate).convertAndSend(eq("/topic/auctions/10"), eq(event));
+        verify(auctionParticipantRepository).save(argThat(participant ->
+                Long.valueOf(10L).equals(participant.getAuctionId())
+                        && "bidder2".equals(participant.getUserId())));
+    }
+
+    @Test
+    void testCreateAuctionOutbidNotification() {
+        AuctionEventMessage event = new AuctionEventMessage(
+                2L,
+                "Outbid",
+                LocalDateTime.now(),
+                Map.of(
+                        "auctionId", 11L,
+                        "itemName", "Camera",
+                        "bidderId", "oldWinner",
+                        "newBidAmount", "250000"
+                ));
+
+        NotificationPreference preference = new NotificationPreference();
+        preference.setUserId("oldWinner");
+        preference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("oldWinner")).thenReturn(Optional.of(preference));
+
+        service.createAuctionOutbidNotification(event);
+
+        verify(repository).save(argThat(n ->
+                "oldWinner".equals(n.getUserId()) && "AUCTION_OUTBID".equals(n.getType())));
+        verify(messagingTemplate).convertAndSend(eq("/topic/auctions/11"), eq(event));
+    }
+
+    @Test
+    void testCreateAuctionWonNotification() {
+        AuctionFinishedMessage message = new AuctionFinishedMessage(
+                12L,
+                "winner1",
+                "seller1",
+                "Keyboard",
+                300000.0,
+                5L);
+
+        NotificationPreference preference = new NotificationPreference();
+        preference.setUserId("winner1");
+        preference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("winner1")).thenReturn(Optional.of(preference));
+
+        service.createAuctionWonNotification(message);
+
+        verify(repository).save(argThat(n ->
+                "winner1".equals(n.getUserId()) && "AUCTION_WON".equals(n.getType())));
+    }
+
+    @Test
+    void testSendNotificationUsesEmailPreferenceWhenAvailable() {
+        NotificationPreference preference = new NotificationPreference();
+        preference.setUserId("winner1");
+        preference.setEmail("winner@example.com");
+        preference.setEmailEnabled(true);
+        preference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("winner1")).thenReturn(Optional.of(preference));
+
+        service.sendNotification("winner1", "Anda memenangkan lelang.", "AUCTION_WON");
+
+        verify(repository).save(argThat(n ->
+                "winner1".equals(n.getUserId())
+                        && "AUCTION_WON".equals(n.getType())
+                        && "PUSH".equals(n.getPreferenceType())));
+        verify(repository, atLeastOnce()).save(argThat(n ->
+                "winner1".equals(n.getUserId())
+                        && "AUCTION_WON".equals(n.getType())
+                        && "EMAIL".equals(n.getPreferenceType())
+                        && "winner@example.com".equals(n.getRecipientEmail())));
+        verify(emailService).sendSimpleEmail(eq("winner@example.com"), contains("AUCTION_WON"), eq("Anda memenangkan lelang."));
+    }
+
+    @Test
+    void testAuctionNotificationNullInputsAreIgnored() {
+        service.createAuctionBidNotification(null);
+        service.createAuctionOutbidNotification(new AuctionEventMessage());
+        service.createAuctionWonNotification(null);
+        service.createAuctionWonNotification(new AuctionFinishedMessage());
+
+        verify(repository, never()).save(argThat(n -> n.getType() != null && n.getType().startsWith("AUCTION_")));
     }
 }

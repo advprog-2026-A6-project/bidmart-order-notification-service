@@ -14,6 +14,18 @@
         <input type="text" id="userIdInput" placeholder="Enter User ID to view history...">
         <button onclick="loadNotifications()">Search</button>
     </div>
+
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 0.5rem;">Live Update Check</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0;">
+            Setelah memasukkan User ID, halaman ini subscribe ke <b>/topic/notifications/{userId}</b>.
+            Jalankan simulasi di halaman Simulate untuk melihat toast dan list otomatis ter-refresh.
+        </p>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <span id="live-status" style="font-size: 0.85rem; color: #64748b;">Belum subscribe</span>
+            <button class="btn-outline" style="width: auto;" onclick="goToSimulator()">Buka Simulator</button>
+        </div>
+    </div>
     
     <div id="list">
         <!-- Records will appear here -->
@@ -31,6 +43,7 @@
         if (typeof connectWebSocket === 'function') {
             connectWebSocket(userId);
         }
+        document.getElementById('live-status').innerText = `Subscribed ke /topic/notifications/${userId}`;
 
         fetch(`/api/order-notification/notifications/${userId}`)
             .then(res => res.json())
@@ -44,7 +57,7 @@
                     item.innerHTML = `
                         <div class="notif-content">
                             <div class="notif-meta">
-                                <span class="type-tag">${n.type}</span>
+                                <span class="type-tag">${n.type || 'UNKNOWN'}</span>
                                 <span class="pref-tag">${n.preferenceType}</span>
                                 <span>Status: ${n.status}</span>
                             </div>
@@ -54,6 +67,10 @@
                     list.appendChild(item);
                 });
             });
+    }
+
+    function goToSimulator() {
+        window.location.href = '/simulate';
     }
 
     // Refresh list if a new notification arrives while on this page

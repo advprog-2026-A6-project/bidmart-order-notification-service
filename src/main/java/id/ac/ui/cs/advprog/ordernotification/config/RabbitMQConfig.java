@@ -16,6 +16,10 @@ public class RabbitMQConfig {
     public static final String QUEUE_NAME = "auction.finished.queue";
     public static final String EXCHANGE_NAME = "auction.exchange";
     public static final String ROUTING_KEY = "auction.finished.key";
+    public static final String AUCTION_ACTIVITY_QUEUE_NAME = "auction.activity.notification.queue";
+    public static final String AUCTION_WON_QUEUE_NAME = "auction.won.notification.queue";
+    public static final String BID_PLACED_ROUTING_KEY = "auction.bidplaced";
+    public static final String OUTBID_ROUTING_KEY = "auction.outbid";
 
     public static final String WALLET_QUEUE_NAME = "wallet.notification.queue";
     public static final String WALLET_EXCHANGE_NAME = "bidmart.wallet.exchange";
@@ -36,6 +40,37 @@ public class RabbitMQConfig {
     @Bean
     public Binding auctionFinishedBinding(
             @Qualifier("auctionFinishedQueue") Queue queue,
+            @Qualifier("auctionExchange") TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
+    }
+
+    @Bean
+    public Queue auctionActivityQueue() {
+        return new Queue(AUCTION_ACTIVITY_QUEUE_NAME, true);
+    }
+
+    @Bean
+    public Queue auctionWonQueue() {
+        return new Queue(AUCTION_WON_QUEUE_NAME, true);
+    }
+
+    @Bean
+    public Binding auctionBidPlacedBinding(
+            @Qualifier("auctionActivityQueue") Queue queue,
+            @Qualifier("auctionExchange") TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(BID_PLACED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding auctionOutbidBinding(
+            @Qualifier("auctionActivityQueue") Queue queue,
+            @Qualifier("auctionExchange") TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(OUTBID_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding auctionWonBinding(
+            @Qualifier("auctionWonQueue") Queue queue,
             @Qualifier("auctionExchange") TopicExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
     }

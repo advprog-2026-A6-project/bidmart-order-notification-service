@@ -66,6 +66,23 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public List<Order> findByUserId(String userId) {
+        return orderRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Order markPacked(Long id) {
+        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException(ORDER_NOT_FOUND_MSG));
+        order.setStatus("PACKED");
+        Order savedOrder = orderRepository.save(order);
+
+        String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") sedang dikemas.";
+        notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_PACKED");
+
+        return savedOrder;
+    }
+
+    @Override
     public Order updateTrackingNumber(Long id, String trackingNumber) {
         Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException(ORDER_NOT_FOUND_MSG));
         order.setTrackingNumber(trackingNumber);
