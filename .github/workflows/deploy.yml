@@ -52,21 +52,21 @@ jobs:
       - name: Setup environment config
         run: |
           ssh -i ~/.ssh/ec2_key.pem "$EC2_USER@$EC2_HOST" "sudo mkdir -p /etc/bidmart"
-          ssh -i ~/.ssh/ec2_key.pem "$EC2_USER@$EC2_HOST" "sudo tee /etc/bidmart/order-notification.env > /dev/null" << ENVEOF
-          SPRING_PROFILES_ACTIVE=prod
-          SPRING_DATASOURCE_URL=${{ secrets.SUPABASE_DB_URL }}
-          SPRING_DATASOURCE_USERNAME=${{ secrets.SUPABASE_DB_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD=${{ secrets.SUPABASE_DB_PASSWORD }}
-          SPRING_MAIL_PASSWORD=${{ secrets.SPRING_MAIL_PASSWORD }}
-          SPRING_RABBITMQ_HOST=${{ secrets.SPRING_RABBITMQ_HOST }}
-          SPRING_RABBITMQ_PORT=${{ secrets.SPRING_RABBITMQ_PORT }}
-          SPRING_RABBITMQ_USERNAME=${{ secrets.SPRING_RABBITMQ_USERNAME }}
-          SPRING_RABBITMQ_PASSWORD=${{ secrets.SPRING_RABBITMQ_PASSWORD }}
-          SPRING_RABBITMQ_VHOST=${{ secrets.SPRING_RABBITMQ_VHOST }}
-          AUTH_INTERNAL_SERVICE_URL=${{ secrets.AUTH_INTERNAL_SERVICE_URL }}
-          AUTH_INTERNAL_SERVICE_TOKEN=${{ secrets.AUTH_INTERNAL_SERVICE_TOKEN }}
-          CLARITY_PROJECT_ID=${{ secrets.CLARITY_PROJECT_ID }}
-          SERVER_PORT=8085
+          ssh -i ~/.ssh/ec2_key.pem "$EC2_USER@$EC2_HOST" "sudo tee /etc/bidmart/order-notification.env > /dev/null" << 'ENVEOF'
+          SPRING_PROFILES_ACTIVE="prod"
+          SPRING_DATASOURCE_URL="${{ secrets.SUPABASE_DB_URL }}"
+          SPRING_DATASOURCE_USERNAME="${{ secrets.SUPABASE_DB_USERNAME }}"
+          SPRING_DATASOURCE_PASSWORD="${{ secrets.SUPABASE_DB_PASSWORD }}"
+          SPRING_MAIL_PASSWORD="${{ secrets.SPRING_MAIL_PASSWORD }}"
+          SPRING_RABBITMQ_HOST="${{ secrets.SPRING_RABBITMQ_HOST }}"
+          SPRING_RABBITMQ_PORT="${{ secrets.SPRING_RABBITMQ_PORT }}"
+          SPRING_RABBITMQ_USERNAME="${{ secrets.SPRING_RABBITMQ_USERNAME }}"
+          SPRING_RABBITMQ_PASSWORD="${{ secrets.SPRING_RABBITMQ_PASSWORD }}"
+          SPRING_RABBITMQ_VHOST="${{ secrets.SPRING_RABBITMQ_VHOST }}"
+          AUTH_INTERNAL_SERVICE_URL="${{ secrets.AUTH_INTERNAL_SERVICE_URL }}"
+          AUTH_INTERNAL_SERVICE_TOKEN="${{ secrets.AUTH_INTERNAL_SERVICE_TOKEN }}"
+          CLARITY_PROJECT_ID="${{ secrets.CLARITY_PROJECT_ID }}"
+          SERVER_PORT="8085"
           ENVEOF
           ssh -i ~/.ssh/ec2_key.pem "$EC2_USER@$EC2_HOST" "sudo chmod 600 /etc/bidmart/order-notification.env"
 
