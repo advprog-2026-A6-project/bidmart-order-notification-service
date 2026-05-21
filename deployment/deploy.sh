@@ -18,7 +18,7 @@ fi
 
 SERVER_PORT="${SERVER_PORT:-8085}"
 HEALTH_CHECK_URL="http://localhost:${SERVER_PORT}/actuator/health"
-MAX_ATTEMPTS=12
+MAX_ATTEMPTS=24
 WAIT_SECONDS=5
 
 echo "Deploying ${SERVICE_NAME}..."
@@ -88,7 +88,7 @@ if [ "$HEALTHY" = false ]; then
 
     sudo systemctl status "$SERVICE_NAME" --no-pager || true
     echo "--- APPLICATION LOGS ---"
-    sudo journalctl -u "$SERVICE_NAME" -n 50 --no-pager
+    sudo journalctl -u "$SERVICE_NAME" -n 200 --no-pager
     exit 1
 fi
 
