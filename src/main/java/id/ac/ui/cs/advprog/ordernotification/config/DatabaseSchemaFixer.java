@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 public class DatabaseSchemaFixer implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;
+    private static final String ALTER_NOTIFICATIONS_MESSAGE_TO_TEXT =
+            "ALTER TABLE notifications ALTER COLUMN message TYPE TEXT";
+    private static final String ALTER_ORDERS_DISPUTE_REASON_TO_TEXT =
+            "ALTER TABLE orders ALTER COLUMN dispute_reason TYPE TEXT";
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public DatabaseSchemaFixer(JdbcTemplate jdbcTemplate) {
@@ -19,16 +23,25 @@ public class DatabaseSchemaFixer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        alterColumnToText("notifications", "message");
-        alterColumnToText("orders", "dispute_reason");
+        alterNotificationsMessageToText();
+        alterOrdersDisputeReasonToText();
     }
 
-    private void alterColumnToText(String tableName, String columnName) {
+    private void alterNotificationsMessageToText() {
         try {
-            jdbcTemplate.execute("ALTER TABLE " + tableName + " ALTER COLUMN " + columnName + " TYPE TEXT");
-            log.info("Successfully altered {}.{} column to TEXT", tableName, columnName);
+            jdbcTemplate.execute(ALTER_NOTIFICATIONS_MESSAGE_TO_TEXT);
+            log.info("Successfully altered notifications.message column to TEXT");
         } catch (Exception e) {
-            log.warn("Could not alter {}.{}: {}", tableName, columnName, e.getMessage());
+            log.warn("Could not alter notifications.message: {}", e.getMessage());
+        }
+    }
+
+    private void alterOrdersDisputeReasonToText() {
+        try {
+            jdbcTemplate.execute(ALTER_ORDERS_DISPUTE_REASON_TO_TEXT);
+            log.info("Successfully altered orders.dispute_reason column to TEXT");
+        } catch (Exception e) {
+            log.warn("Could not alter orders.dispute_reason: {}", e.getMessage());
         }
     }
 }
