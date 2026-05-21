@@ -54,8 +54,8 @@ jobs:
           ssh -i ~/.ssh/ec2_key.pem "$EC2_USER@$EC2_HOST" "sudo mkdir -p /etc/bidmart"
           ssh -i ~/.ssh/ec2_key.pem "$EC2_USER@$EC2_HOST" "sudo tee /etc/bidmart/order-notification.env > /dev/null" << 'ENVEOF'
           SPRING_PROFILES_ACTIVE="prod"
-          SPRING_DATASOURCE_URL="${{ secrets.SUPABASE_DB_URL }}"
-          SPRING_DATASOURCE_USERNAME="${{ secrets.SUPABASE_DB_USERNAME }}"
+          SPRING_DATASOURCE_URL="jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+          SPRING_DATASOURCE_USERNAME="postgres.bgajdqmthfdbixbbdiyl"
           SPRING_DATASOURCE_PASSWORD="${{ secrets.SUPABASE_DB_PASSWORD }}"
           SPRING_MAIL_PASSWORD="${{ secrets.SPRING_MAIL_PASSWORD }}"
           SPRING_RABBITMQ_HOST="${{ secrets.SPRING_RABBITMQ_HOST }}"
