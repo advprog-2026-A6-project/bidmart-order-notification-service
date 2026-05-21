@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.ordernotification.service;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
+import id.ac.ui.cs.advprog.ordernotification.event.WalletNotificationEvent;
 
 import java.util.List;
 
@@ -14,4 +15,5 @@ public interface NotificationService {
     NotificationPreference setPreference(String userId, String email, boolean emailEnabled, boolean pushEnabled);
     NotificationPreference getPreference(String userId);
     void sendNotification(String userId, String message, String type);
+    void createWalletNotification(WalletNotificationEvent event);
 }

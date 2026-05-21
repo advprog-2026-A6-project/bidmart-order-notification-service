@@ -6,6 +6,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -35,12 +36,19 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order createAutomaticOrder(Long auctionId, String userId, String itemName, Double totalPrice) {
+        if (auctionId != null) {
+            Optional<Order> existingOrder = orderRepository.findByAuctionId(auctionId);
+            if (existingOrder.isPresent()) {
+                return existingOrder.get();
+            }
+        }
+
         Order order = new Order();
         order.setAuctionId(auctionId);
         order.setUserId(userId);
         order.setItemName(itemName);
         order.setTotalPrice(totalPrice);
-        order.setStatus("AUTOMATIC_CREATED");
+        order.setStatus("PAID");
 
         Order savedOrder = orderRepository.save(order);
         notificationService.createOrderNotification(savedOrder);
@@ -63,8 +71,7 @@ public class OrderServiceImpl implements OrderService {
         order.setTrackingNumber(trackingNumber);
         order.setStatus("SHIPPED");
         Order savedOrder = orderRepository.save(order);
-        
-        // Notify user about shipment
+
         String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah dikirim dengan nomor resi: " + trackingNumber;
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_SHIPPED");
         
@@ -76,8 +83,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException(ORDER_NOT_FOUND_MSG));
         order.setStatus("COMPLETED");
         Order savedOrder = orderRepository.save(order);
-        
-        // Notify buyer that order is complete
+
         String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah selesai. Terima kasih!";
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_COMPLETED");
         

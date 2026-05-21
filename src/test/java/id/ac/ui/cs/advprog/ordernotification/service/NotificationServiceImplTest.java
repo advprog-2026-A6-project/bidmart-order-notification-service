@@ -1,16 +1,23 @@
 package id.ac.ui.cs.advprog.ordernotification.service;
 
+import id.ac.ui.cs.advprog.ordernotification.config.FeatureFlagProperties;
+import id.ac.ui.cs.advprog.ordernotification.dto.AuthContactPreferencesDto;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
+import id.ac.ui.cs.advprog.ordernotification.event.WalletNotificationEvent;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationPreferenceRepository;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,12 +39,20 @@ class NotificationServiceImplTest {
     @Mock
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
-    @InjectMocks
     private NotificationServiceImpl service;
+
+    @Mock
+    private RestTemplate restTemplate;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        service = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty());
         when(repository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -203,7 +218,7 @@ class NotificationServiceImplTest {
     void testFindByUserId() {
         Notification notif = new Notification();
         notif.setUserId("user1");
-        when(repository.findAll()).thenReturn(List.of(notif));
+        when(repository.findByUserId("user1")).thenReturn(List.of(notif));
 
         List<Notification> result = service.findByUserId("user1");
 
@@ -238,6 +253,40 @@ class NotificationServiceImplTest {
         NotificationPreference result = service.getPreference("unknown");
 
         assertEquals("unknown", result.getUserId());
+    }
+
+    @Test
+    void testGetPreference_FetchesFromAuthWhenMissingLocally() {
+        NotificationServiceImpl authAwareService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                restTemplate,
+                "http://localhost:8081/api/internal/users/",
+                "test-internal-token",
+                new FeatureFlagProperties());
+
+        AuthContactPreferencesDto authPreference = new AuthContactPreferencesDto(
+                42L,
+                "seller@example.com",
+                "EMAIL",
+                true,
+                false);
+
+        when(preferenceRepository.findByUserId("42")).thenReturn(Optional.empty());
+        when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(), eq(AuthContactPreferencesDto.class)))
+                .thenReturn(ResponseEntity.ok(authPreference));
+
+        NotificationPreference result = authAwareService.getPreference("42");
+
+        assertEquals("42", result.getUserId());
+        assertEquals("seller@example.com", result.getEmail());
+        assertTrue(result.isEmailEnabled());
+        assertFalse(result.isPushEnabled());
+        verify(preferenceRepository).save(any(NotificationPreference.class));
     }
 
     @Test
@@ -281,6 +330,111 @@ class NotificationServiceImplTest {
         when(preferenceRepository.findByUserId(userId)).thenReturn(Optional.of(pref));
 
         service.sendNotification(userId, "Message", "TYPE");
+
+        verify(repository, never()).save(any());
+        verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
+    }
+
+    @Test
+    void testExecuteDelivery_FallbackWhenNoStrategyMatches() {
+        // Create a service with strategies that don't match any channel
+        id.ac.ui.cs.advprog.ordernotification.service.delivery.NotificationDeliveryStrategy noMatchStrategy =
+                new id.ac.ui.cs.advprog.ordernotification.service.delivery.NotificationDeliveryStrategy() {
+                    @Override
+                    public boolean supports(String preferenceType) {
+                        return false; // Never matches
+                    }
+                    @Override
+                    public Notification deliver(String userId, String message, String type, String recipient) {
+                        return null;
+                    }
+                };
+
+        NotificationServiceImpl serviceWithNoMatch = new NotificationServiceImpl(
+                repository, preferenceRepository, emailService, messagingTemplate,
+                Optional.of(List.of(noMatchStrategy)));
+
+        Order order = new Order();
+        order.setId(1L);
+        order.setUserId("user_fallback");
+        order.setItemName("Test Item");
+
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId("user_fallback");
+        pref.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("user_fallback")).thenReturn(Optional.of(pref));
+
+        serviceWithNoMatch.createOrderNotification(order);
+
+        // The fallback builder should create a notification with status FAILED
+        verify(repository, atLeastOnce()).save(argThat(n ->
+                "FAILED".equals(n.getStatus()) && "PUSH".equals(n.getPreferenceType())));
+    }
+
+    @Test
+    void testConstructor_WithEmptyStrategiesList() {
+        // Test constructor when strategies list is empty
+        NotificationServiceImpl serviceEmptyList = new NotificationServiceImpl(
+                repository, preferenceRepository, emailService, messagingTemplate,
+                Optional.of(java.util.Collections.emptyList()));
+
+        // Verify service is created with default strategies
+        assertNotNull(serviceEmptyList);
+    }
+
+    @Test
+    void testSetPreference_ExistingPreference() {
+        String userId = "user_existing";
+        NotificationPreference existingPref = new NotificationPreference();
+        existingPref.setUserId(userId);
+        existingPref.setEmail("old@example.com");
+        existingPref.setEmailEnabled(false);
+        existingPref.setPushEnabled(false);
+
+        when(preferenceRepository.findByUserId(userId)).thenReturn(Optional.of(existingPref));
+        when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        NotificationPreference result = service.setPreference(userId, "new@example.com", true, true);
+
+        assertEquals(userId, result.getUserId());
+        assertEquals("new@example.com", result.getEmail());
+        assertTrue(result.isEmailEnabled());
+        assertTrue(result.isPushEnabled());
+    }
+
+    @Test
+    void testCreateWalletNotification_Topup() {
+        String userId = "1";
+        WalletNotificationEvent event = new WalletNotificationEvent(
+                userId,
+                "TOPUP",
+                BigDecimal.valueOf(100000),
+                "Top-up dari Bank BCA",
+                LocalDateTime.parse("2026-05-20T18:35:00.123456"));
+
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId(userId);
+        pref.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId(userId)).thenReturn(Optional.of(pref));
+
+        service.createWalletNotification(event);
+
+        verify(repository).save(argThat(n ->
+                userId.equals(n.getUserId())
+                        && "WALLET_TOPUP".equals(n.getType())
+                        && "PUSH".equals(n.getPreferenceType())
+                        && n.getMessage().contains("Rp100.000")
+                        && n.getMessage().contains("Top-up dari Bank BCA")));
+        verify(messagingTemplate).convertAndSend(
+                eq("/topic/notifications/" + userId),
+                contains("Top-up dari Bank BCA"));
+    }
+
+    @Test
+    void testCreateWalletNotification_NullMessageIgnored() {
+        service.createWalletNotification(null);
 
         verify(repository, never()).save(any());
         verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());

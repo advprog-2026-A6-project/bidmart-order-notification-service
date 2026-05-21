@@ -25,6 +25,7 @@ public class Order {
     private Double totalPrice;
     private String status;
     private String trackingNumber;
+    @Column(columnDefinition = "TEXT")
     private String disputeReason;
     private String disputeStatus;
 
