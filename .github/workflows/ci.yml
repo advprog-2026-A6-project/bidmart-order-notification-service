@@ -49,6 +49,18 @@ jobs:
       - name: Test + Lint + Coverage
         run: ./gradlew --no-daemon clean check jacocoTestReport
 
+      - name: Upload quality reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: order-notification-quality-reports
+          path: |
+            build/reports/tests/test
+            build/reports/jacoco/test/html
+            build/reports/checkstyle
+            build/reports/spotbugs
+          if-no-files-found: warn
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
@@ -65,23 +77,3 @@ jobs:
             -Dsonar.junit.reportPaths=build/test-results/test
             -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
 
-
-  heroku-deployment:
-    name: Deploy to Heroku
-    needs: build-test-lint-sonar
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Heroku CLI
-        run: curl https://cli-assets.heroku.com/install.sh | sh
-
-      - name: Deploy to Heroku
-        uses: akhileshns/heroku-deploy@v3.13.15
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: "bidmart-order-notification"
-          heroku_email: "affandishafwansoleh@gmail.com"

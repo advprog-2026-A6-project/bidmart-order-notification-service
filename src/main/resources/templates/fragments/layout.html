@@ -11,6 +11,24 @@
     <link rel="stylesheet" th:href="@{/css/common.css}">
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js" integrity="sha384-A00Hq9ba4MKD0hespdJYJJGehRT74vcI2pk7ZZGd3WYDDop/amX8IGnAvjouehH3" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" integrity="sha384-clKAk7WaYNQiu/pGVWisoFQcSK2VL7YweoI1gim9/HFbMsRvD2ZtLWNoZoL4df65" crossorigin="anonymous"></script>
+    <script th:if="${clarityProjectId != null and !#strings.isEmpty(clarityProjectId)}" th:inline="javascript">
+        const clarityProjectId = /*[[${clarityProjectId}]]*/ "";
+        (function(globalScope, documentRef, scriptTagName, scriptBaseUrl, projectId) {
+            const clarityFn = globalScope.clarity || function() {
+                const queue = globalScope.clarity.q || [];
+                globalScope.clarity.q = queue;
+                queue.push(arguments);
+            };
+            globalScope.clarity = clarityFn;
+
+            const clarityScript = documentRef.createElement(scriptTagName);
+            clarityScript.async = true;
+            clarityScript.src = scriptBaseUrl + projectId;
+
+            const firstScript = documentRef.getElementsByTagName(scriptTagName)[0];
+            firstScript.parentNode.insertBefore(clarityScript, firstScript);
+        })(globalThis, document, "script", "https://www.clarity.ms/tag/", clarityProjectId);
+    </script>
 </head>
 <body>
 

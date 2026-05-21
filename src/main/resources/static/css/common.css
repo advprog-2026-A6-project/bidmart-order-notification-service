@@ -1,27 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --secondary: #ec4899;
-    --accent: #f59e0b;
-    --bg: #f1f5f9;
-    --card: rgba(255, 255, 255, 0.8);
-    --text: #0f172a;
-    --text-muted: #64748b;
-    --border: rgba(226, 232, 240, 0.6);
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.3);
+  --primary-white: #ffffff;
+  --primary-bg: #f8fafc;
+  --secondary-red: #e63946;
+  --secondary-red-hover: #c92a36;
+  --tertiary-blue: #1d3557;
+  --tertiary-blue-light: #2a4b7c;
+  --text-dark: #0f172a;
+  --text-light: #64748b;
+  --border-light: #e2e8f0;
+  
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+
+  /* Legacy mappings to avoid breaking existing HTML classes */
+  --primary: var(--secondary-red);
+  --primary-dark: var(--secondary-red-hover);
+  --bg: var(--primary-bg);
+  --card: var(--primary-white);
+  --text: var(--text-dark);
+  --text-muted: var(--text-light);
+  --border: var(--border-light);
 }
 
 body { 
-    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif; 
-    background: radial-gradient(circle at top right, #e0e7ff, #f1f5f9 50%);
-    background-attachment: fixed;
-    color: var(--text); 
+    font-family: 'Inter', sans-serif;
+    background-color: var(--primary-bg);
+    color: var(--text-dark); 
     margin: 0; 
     padding: 0; 
     min-height: 100vh;
+    line-height: 1.6;
 }
 
 /* Glassmorphism Navigation */
@@ -29,15 +40,16 @@ nav {
     background: var(--glass-bg); 
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding: 0.75rem 2rem; 
+    padding: 1rem 2rem; 
     display: flex; 
     justify-content: center;
+    align-items: center;
     gap: 1.5rem; 
-    border-bottom: 1px solid var(--glass-border); 
+    border-bottom: 1px solid var(--border-light); 
     position: sticky;
     top: 0;
     z-index: 1000;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--glass-shadow);
 }
 
 nav a { 
@@ -51,14 +63,14 @@ nav a {
 }
 
 nav a:hover {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(230, 57, 70, 0.05);
     color: var(--primary);
 }
 
 nav a.active { 
-    background: var(--primary);
-    color: white; 
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    background: transparent;
+    color: var(--primary); 
+    font-weight: 600;
 }
 
 .container { 
@@ -70,21 +82,20 @@ nav a.active {
 /* Premium Card Style */
 .card { 
     background: var(--card); 
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     padding: 2rem; 
-    border-radius: 20px; 
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    border-radius: 16px; 
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 h1, h2, h3 { 
-    font-weight: 800;
-    letter-spacing: -0.025em;
+    font-weight: 700;
+    letter-spacing: -0.5px;
     margin-top: 0; 
+    color: var(--tertiary-blue);
 }
 
-h1 { font-size: 2.25rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+h1 { font-size: 2.25rem; }
 
 .form-group { 
     margin-bottom: 1.5rem; 
@@ -93,27 +104,27 @@ h1 { font-size: 2.25rem; background: linear-gradient(to right, var(--primary), v
 label { 
     display: block; 
     margin-bottom: 0.5rem; 
-    font-weight: 600; 
-    font-size: 0.85rem; 
-    color: var(--text-muted);
+    font-weight: 500; 
+    font-size: 0.9rem; 
+    color: var(--text-dark);
 }
 
 input[type="text"], input[type="email"], input[type="number"], select { 
     width: 100%; 
-    padding: 0.875rem; 
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid #e2e8f0; 
-    border-radius: 12px; 
+    padding: 0.75rem 1rem; 
+    background-color: var(--primary-white);
+    border: 1px solid var(--border-light); 
+    border-radius: 50px; 
     box-sizing: border-box; 
     font-family: inherit;
-    transition: all 0.2s;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
 }
 
 input:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-    background: white;
+    border-color: var(--tertiary-blue-light);
+    box-shadow: 0 0 0 3px rgba(29, 53, 87, 0.1);
 }
 
 button { 
@@ -121,9 +132,9 @@ button {
     background: var(--primary); 
     color: white; 
     border: none; 
-    padding: 0.875rem 1.5rem; 
-    border-radius: 12px; 
-    font-weight: 700; 
+    padding: 0.6rem 1.5rem; 
+    border-radius: 50px; 
+    font-weight: 600; 
     font-size: 0.95rem;
     width: 100%; 
     transition: all 0.3s;
@@ -131,12 +142,13 @@ button {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    box-shadow: 0 4px 14px rgba(230, 57, 70, 0.3);
 }
 
 button:hover { 
     background: var(--primary-dark);
     transform: translateY(-1px);
-    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
 }
 
 button:active {
@@ -147,11 +159,32 @@ button.btn-outline {
     background: transparent;
     border: 2px solid var(--primary);
     color: var(--primary);
+    box-shadow: none;
 }
 
 button.btn-outline:hover {
     background: var(--primary);
     color: white;
+}
+
+/* Utilities */
+.text-center { text-align: center; }
+.mt-4 { margin-top: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--primary-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-light);
 }
 
 /* Animations */

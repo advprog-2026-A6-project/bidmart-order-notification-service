@@ -38,3 +38,7 @@ out/
 
 # Project specific
 test_output*.txt
+data/*.db
+data/*.trace.db
+data/*.mv.db
+/bidmart-order-notification-service/
