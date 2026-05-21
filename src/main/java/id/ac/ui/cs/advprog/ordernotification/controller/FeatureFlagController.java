@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 @RestController
 @RequestMapping("/api/feature-flags")
@@ -14,6 +15,7 @@ public class FeatureFlagController {
 
     private final FeatureFlagProperties featureFlags;
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public FeatureFlagController(FeatureFlagProperties featureFlags) {
         this.featureFlags = featureFlags;
     }

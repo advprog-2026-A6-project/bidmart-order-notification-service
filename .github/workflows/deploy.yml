@@ -36,8 +36,10 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
           chmod 600 ~/.ssh/ec2_key.pem
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
-
+          cat >> ~/.ssh/config <<EOF
+          Host *
+            StrictHostKeyChecking accept-new
+          EOF
       - name: Upload JAR and Deploy Script to EC2
         run: |
           scp -i ~/.ssh/ec2_key.pem \
