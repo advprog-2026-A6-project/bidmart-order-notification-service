@@ -148,9 +148,38 @@ class OrderNotificationControllerTest {
     }
 
     @Test
+    void testUpdatePreferenceAllowedWithMatchingHeader() throws Exception {
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId("user123");
+
+        when(notificationService.setPreference("user123", "test@mail.com", true, true)).thenReturn(pref);
+
+        mockMvc.perform(post("/api/order-notification/preferences/user123")
+                .header("X-User-Id", "user123")
+                .param("email", "test@mail.com")
+                .param("emailEnabled", "true")
+                .param("pushEnabled", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value("user123"));
+    }
+
+    @Test
     void testGetUserNotificationsForbidden() throws Exception {
         mockMvc.perform(get("/api/order-notification/notifications/user123")
                 .header("X-User-Id", "otherUser"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testGetUserNotificationsAllowedWithMatchingHeader() throws Exception {
+        Notification notif = new Notification();
+        notif.setMessage("Header Match");
+
+        when(notificationService.findByUserId("user123")).thenReturn(List.of(notif));
+
+        mockMvc.perform(get("/api/order-notification/notifications/user123")
+                .header("X-User-Id", "user123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].message").value("Header Match"));
     }
 }
