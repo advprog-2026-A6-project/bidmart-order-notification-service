@@ -8,6 +8,10 @@ import id.ac.ui.cs.advprog.ordernotification.repository.NotificationPreferenceRe
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -26,6 +30,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final SimpMessagingTemplate messagingTemplate;
     private final RestTemplate restTemplate;
     private final String authServiceUrl;
+    private final String authInternalToken;
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public NotificationServiceImpl(NotificationRepository repository,
@@ -33,13 +38,15 @@ public class NotificationServiceImpl implements NotificationService {
             EmailService emailService,
             SimpMessagingTemplate messagingTemplate,
             RestTemplate restTemplate,
-            @Value("${service.auth.url:http://35.168.202.46:8081/api/internal/users/}") String authServiceUrl) {
+            @Value("${service.auth.url:http://35.168.202.46:8081/api/internal/users/}") String authServiceUrl,
+            @Value("${service.auth.internal-token:${AUTH_INTERNAL_SERVICE_TOKEN:bidmart-internal-dev-token}}") String authInternalToken) {
         this.repository = repository;
         this.preferenceRepository = preferenceRepository;
         this.emailService = emailService;
         this.messagingTemplate = messagingTemplate;
         this.restTemplate = restTemplate;
         this.authServiceUrl = authServiceUrl;
+        this.authInternalToken = authInternalToken;
     }
 
     @Override
@@ -155,10 +162,16 @@ public class NotificationServiceImpl implements NotificationService {
 
     private java.util.Optional<NotificationPreference> fetchPreferenceFromAuth(String userId) {
         try {
-            AuthContactPreferencesDto authPreference = restTemplate.getForObject(
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Internal-Service-Token", authInternalToken);
+
+            ResponseEntity<AuthContactPreferencesDto> response = restTemplate.exchange(
                     authServiceUrl + userId + "/contact-preferences",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
                     AuthContactPreferencesDto.class
             );
+            AuthContactPreferencesDto authPreference = response.getBody();
 
             if (authPreference == null) {
                 return java.util.Optional.empty();

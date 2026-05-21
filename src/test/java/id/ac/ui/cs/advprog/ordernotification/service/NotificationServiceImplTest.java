@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
@@ -47,6 +49,7 @@ class NotificationServiceImplTest {
         when(repository.save(any(Notification.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(invocation -> invocation.getArgument(0));
         ReflectionTestUtils.setField(service, "authServiceUrl", "http://localhost:8081/api/internal/users/");
+        ReflectionTestUtils.setField(service, "authInternalToken", "test-internal-token");
     }
 
     @Test
@@ -242,8 +245,8 @@ class NotificationServiceImplTest {
     @Test
     void testGetPreference_Default() {
         when(preferenceRepository.findByUserId("unknown")).thenReturn(Optional.empty());
-        when(restTemplate.getForObject(anyString(), eq(AuthContactPreferencesDto.class)))
-                .thenReturn(null);
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(), eq(AuthContactPreferencesDto.class)))
+                .thenReturn(ResponseEntity.ok(null));
 
         NotificationPreference result = service.getPreference("unknown");
 
@@ -253,14 +256,14 @@ class NotificationServiceImplTest {
     @Test
     void testGetPreference_FetchesFromAuthWhenMissingLocally() {
         when(preferenceRepository.findByUserId("42")).thenReturn(Optional.empty());
-        when(restTemplate.getForObject(anyString(), eq(AuthContactPreferencesDto.class)))
-                .thenReturn(new AuthContactPreferencesDto(
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(), eq(AuthContactPreferencesDto.class)))
+                .thenReturn(ResponseEntity.ok(new AuthContactPreferencesDto(
                         42L,
                         "seller@example.com",
                         "EMAIL",
                         true,
                         false
-                ));
+                )));
 
         NotificationPreference result = service.getPreference("42");
 
