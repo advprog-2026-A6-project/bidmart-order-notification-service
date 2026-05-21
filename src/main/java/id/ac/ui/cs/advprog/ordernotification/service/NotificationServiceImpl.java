@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.ordernotification.service;
 
+import id.ac.ui.cs.advprog.ordernotification.config.FeatureFlagProperties;
 import id.ac.ui.cs.advprog.ordernotification.dto.AuthContactPreferencesDto;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationFactory;
@@ -40,6 +41,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final RestTemplate restTemplate;
     private final String authServiceUrl;
     private final String authInternalToken;
+    private final FeatureFlagProperties featureFlags;
 
     private static final String NOTIF_TYPE_ORDER_CREATED = "ORDER_CREATED";
     private static final String DEFAULT_WALLET_TYPE = "WALLET";
@@ -54,12 +56,14 @@ public class NotificationServiceImpl implements NotificationService {
             RestTemplate restTemplate,
             @Value("${service.auth.url:}") String authServiceUrl,
             @Value("${service.auth.internal-token:${AUTH_INTERNAL_SERVICE_TOKEN:bidmart-internal-dev-token}}")
-            String authInternalToken) {
+            String authInternalToken,
+            FeatureFlagProperties featureFlags) {
         this.repository = repository;
         this.preferenceRepository = preferenceRepository;
         this.restTemplate = restTemplate;
         this.authServiceUrl = authServiceUrl;
         this.authInternalToken = authInternalToken;
+        this.featureFlags = featureFlags;
         
         List<NotificationDeliveryStrategy> strategies = deliveryStrategiesOpt.isPresent()
                 ? deliveryStrategiesOpt.get() : Collections.emptyList();
@@ -79,7 +83,7 @@ public class NotificationServiceImpl implements NotificationService {
             SimpMessagingTemplate messagingTemplate,
             Optional<List<NotificationDeliveryStrategy>> deliveryStrategiesOpt) {
         this(repository, preferenceRepository, emailService, messagingTemplate, deliveryStrategiesOpt,
-                null, "", "bidmart-internal-dev-token");
+                null, "", "bidmart-internal-dev-token", new FeatureFlagProperties());
     }
 
     @Override
@@ -109,11 +113,11 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationPreference pref = getPreference(order.getUserId());
         String messageBody = "Order #" + order.getId() + " untuk " + order.getItemName() + " telah dibuat.";
 
-        if (pref.isPushEnabled()) {
+        if (featureFlags.isPushNotificationEnabled() && pref.isPushEnabled()) {
             executeDelivery("PUSH", order.getUserId(), messageBody, NOTIF_TYPE_ORDER_CREATED, null);
         }
 
-        if (pref.getEmail() != null && !pref.getEmail().isEmpty() && pref.isEmailEnabled()) {
+        if (featureFlags.isEmailNotificationEnabled() && pref.getEmail() != null && !pref.getEmail().isEmpty() && pref.isEmailEnabled()) {
             String emailContent = "Yth. Pengguna BidMart,\n\n" +
                     "Selamat! Anda telah memenangkan lelang dan pesanan Anda telah berhasil dibuat secara otomatis melalui sistem BidMart.\n\n" +
                     "Detail Pesanan:\n" +
@@ -162,7 +166,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendNotification(String userId, String message, String type) {
         NotificationPreference pref = getPreference(userId);
-        if (pref.isPushEnabled()) {
+        if (featureFlags.isPushNotificationEnabled() && pref.isPushEnabled()) {
             executeDelivery("PUSH", userId, message, type, null);
         }
     }

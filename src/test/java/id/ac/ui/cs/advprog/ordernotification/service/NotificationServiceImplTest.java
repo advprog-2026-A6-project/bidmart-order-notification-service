@@ -1,5 +1,6 @@
 package id.ac.ui.cs.advprog.ordernotification.service;
 
+import id.ac.ui.cs.advprog.ordernotification.config.FeatureFlagProperties;
 import id.ac.ui.cs.advprog.ordernotification.dto.AuthContactPreferencesDto;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
@@ -264,7 +265,8 @@ class NotificationServiceImplTest {
                 Optional.empty(),
                 restTemplate,
                 "http://localhost:8081/api/internal/users/",
-                "test-internal-token");
+                "test-internal-token",
+                new FeatureFlagProperties());
 
         AuthContactPreferencesDto authPreference = new AuthContactPreferencesDto(
                 42L,
