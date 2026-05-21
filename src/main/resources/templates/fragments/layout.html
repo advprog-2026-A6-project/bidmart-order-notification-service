@@ -11,6 +11,13 @@
     <link rel="stylesheet" th:href="@{/css/common.css}">
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js" integrity="sha384-A00Hq9ba4MKD0hespdJYJJGehRT74vcI2pk7ZZGd3WYDDop/amX8IGnAvjouehH3" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" integrity="sha384-clKAk7WaYNQiu/pGVWisoFQcSK2VL7YweoI1gim9/HFbMsRvD2ZtLWNoZoL4df65" crossorigin="anonymous"></script>
+    <script th:if="${clarityProjectId != null and !#strings.isEmpty(clarityProjectId)}" th:inline="javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", /*[[${clarityProjectId}]]*/ "");
+    </script>
 </head>
 <body>
 

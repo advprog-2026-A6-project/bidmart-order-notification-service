@@ -20,12 +20,13 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+          cache: gradle
 
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
-      - name: Build Spring Boot JAR
-        run: ./gradlew clean bootJar -x test
+      - name: Test and Build Spring Boot JAR
+        run: ./gradlew clean test bootJar
 
       - name: Prepare SSH key
         run: |
@@ -34,21 +35,18 @@ jobs:
           chmod 600 ~/.ssh/ec2_key.pem
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Upload JAR to EC2
+      - name: Upload JAR and Deploy Script to EC2
         run: |
           scp -i ~/.ssh/ec2_key.pem \
             build/libs/bidmart-order-notification-service-0.0.1-SNAPSHOT.jar \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/app.jar
+          scp -i ~/.ssh/ec2_key.pem \
+            deployment/deploy.sh \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/deploy.sh
 
-      - name: Deploy and restart service
+      - name: Setup environment config
         run: |
-          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            sudo mkdir -p /opt/bidmart-order-notification-service &&
-            sudo mv /tmp/app.jar /opt/bidmart-order-notification-service/app.jar &&
-            sudo chown -R ubuntu:ubuntu /opt/bidmart-order-notification-service &&
-            sudo mkdir -p /etc/bidmart
-          "
-
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "sudo mkdir -p /etc/bidmart"
           ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "sudo tee /etc/bidmart/order-notification.env > /dev/null" << ENVEOF
           SPRING_PROFILES_ACTIVE=prod
           SPRING_DATASOURCE_URL=${{ secrets.SUPABASE_DB_URL }}
@@ -60,12 +58,18 @@ jobs:
           SPRING_RABBITMQ_USERNAME=${{ secrets.SPRING_RABBITMQ_USERNAME }}
           SPRING_RABBITMQ_PASSWORD=${{ secrets.SPRING_RABBITMQ_PASSWORD }}
           SPRING_RABBITMQ_VHOST=${{ secrets.SPRING_RABBITMQ_VHOST }}
+          AUTH_INTERNAL_SERVICE_URL=${{ secrets.AUTH_INTERNAL_SERVICE_URL || 'http://35.168.202.46:8081/api/internal/users/' }}
+          AUTH_INTERNAL_SERVICE_TOKEN=${{ secrets.AUTH_INTERNAL_SERVICE_TOKEN }}
+          CLARITY_PROJECT_ID=${{ secrets.CLARITY_PROJECT_ID }}
           SERVER_PORT=8085
           ENVEOF
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "sudo chmod 600 /etc/bidmart/order-notification.env"
 
+      - name: Execute advanced deploy script
+        run: |
           ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            sudo chmod 600 /etc/bidmart/order-notification.env &&
-            sudo systemctl daemon-reload &&
-            sudo systemctl restart bidmart-order-notification-service &&
-            sudo systemctl status bidmart-order-notification-service --no-pager
+            sudo mkdir -p /opt/bidmart-order-notification-service &&
+            sudo mv /tmp/deploy.sh /opt/bidmart-order-notification-service/deploy.sh &&
+            sudo chmod +x /opt/bidmart-order-notification-service/deploy.sh &&
+            sudo /opt/bidmart-order-notification-service/deploy.sh
           "
