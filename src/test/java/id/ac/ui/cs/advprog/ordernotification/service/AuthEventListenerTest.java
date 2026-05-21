@@ -91,6 +91,16 @@ class AuthEventListenerTest {
     }
 
     @Test
+    void handleAccountDisabledEventUsesFallbacksWhenValuesMissing() {
+        listener.handle("{}", "auth.event.account_disabled");
+
+        verify(notificationRepository).save(argThat(notification ->
+                "system".equals(notification.getUserId())
+                        && notification.getRecipientEmail() == null
+                        && notification.getMessage().contains("tanpa alasan")));
+    }
+
+    @Test
     void handleInvalidPayloadThrowsClearException() {
         IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> listener.handle("{invalid-json", "auth.event.account_disabled"));

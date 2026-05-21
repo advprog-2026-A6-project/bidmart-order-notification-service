@@ -57,6 +57,37 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void testCreateAutomaticOrder_ReturnsExistingOrderWhenAuctionAlreadyHasOrder() {
+        Order existingOrder = new Order();
+        existingOrder.setId(7L);
+        existingOrder.setAuctionId(99L);
+        existingOrder.setStatus("PAID");
+
+        when(orderRepository.findByAuctionId(99L)).thenReturn(java.util.Optional.of(existingOrder));
+
+        Order result = service.createAutomaticOrder(99L, "user1", "Item A", 150000.0);
+
+        assertSame(existingOrder, result);
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(notificationService, never()).createOrderNotification(any(Order.class));
+    }
+
+    @Test
+    void testCreateAutomaticOrder_CreatesOrderWhenAuctionIdIsNull() {
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Order result = service.createAutomaticOrder(null, "user1", "Item A", 150000.0);
+
+        assertNull(result.getAuctionId());
+        assertEquals("user1", result.getUserId());
+        assertEquals("Item A", result.getItemName());
+        assertEquals(150000.0, result.getTotalPrice());
+        assertEquals("PAID", result.getStatus());
+        verify(orderRepository, never()).findByAuctionId(anyLong());
+        verify(notificationService).createOrderNotification(result);
+    }
+
+    @Test
     void testFindAll() {
         when(orderRepository.findAll()).thenReturn(java.util.List.of(new Order()));
 

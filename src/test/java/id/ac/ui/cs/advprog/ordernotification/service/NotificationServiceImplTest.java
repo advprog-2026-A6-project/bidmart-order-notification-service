@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -171,6 +172,42 @@ class NotificationServiceImplTest {
     }
 
     @Test
+    void testCreateOrderNotification_FeatureFlagsDisabled() {
+        FeatureFlagProperties flags = new FeatureFlagProperties();
+        flags.setPushNotificationEnabled(false);
+        flags.setEmailNotificationEnabled(false);
+        NotificationServiceImpl disabledFeatureService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                restTemplate,
+                "",
+                "token",
+                flags);
+
+        Order order = new Order();
+        order.setId(1L);
+        order.setUserId("user123");
+        order.setItemName("Test Item");
+
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId("user123");
+        pref.setEmail("test@mail.com");
+        pref.setEmailEnabled(true);
+        pref.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("user123")).thenReturn(Optional.of(pref));
+
+        disabledFeatureService.createOrderNotification(order);
+
+        verify(repository).save(argThat(n -> "EMAIL_ERROR".equals(n.getPreferenceType())));
+        verify(emailService, never()).sendSimpleEmail(any(), any(), any());
+        verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
+    }
+
+    @Test
     void testCreateOrderNotification_EmailNull() {
         Order order = new Order();
         order.setId(1L);
@@ -287,6 +324,122 @@ class NotificationServiceImplTest {
         assertTrue(result.isEmailEnabled());
         assertFalse(result.isPushEnabled());
         verify(preferenceRepository).save(any(NotificationPreference.class));
+    }
+
+    @Test
+    void testGetPreference_ReturnsDefaultWhenAuthReturnsNoBody() {
+        NotificationServiceImpl authAwareService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                restTemplate,
+                "http://localhost:8081/api/internal/users/",
+                "test-internal-token",
+                new FeatureFlagProperties());
+
+        when(preferenceRepository.findByUserId("43")).thenReturn(Optional.empty());
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(), eq(AuthContactPreferencesDto.class)))
+                .thenReturn(ResponseEntity.ok(null));
+
+        NotificationPreference result = authAwareService.getPreference("43");
+
+        assertEquals("43", result.getUserId());
+        verify(preferenceRepository, never()).save(any(NotificationPreference.class));
+    }
+
+    @Test
+    void testGetPreference_ReturnsDefaultWhenAuthRequestFails() {
+        NotificationServiceImpl authAwareService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                restTemplate,
+                "http://localhost:8081/api/internal/users/",
+                "test-internal-token",
+                new FeatureFlagProperties());
+
+        when(preferenceRepository.findByUserId("44")).thenReturn(Optional.empty());
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(), eq(AuthContactPreferencesDto.class)))
+                .thenThrow(new RestClientException("auth unavailable"));
+
+        NotificationPreference result = authAwareService.getPreference("44");
+
+        assertEquals("44", result.getUserId());
+        verify(preferenceRepository, never()).save(any(NotificationPreference.class));
+    }
+
+    @Test
+    void testGetPreference_DoesNotSendBlankInternalToken() {
+        NotificationServiceImpl authAwareService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                restTemplate,
+                "http://localhost:8081/api/internal/users/",
+                " ",
+                new FeatureFlagProperties());
+
+        AuthContactPreferencesDto authPreference = new AuthContactPreferencesDto(
+                45L,
+                "blank-token@example.com",
+                "EMAIL",
+                false,
+                true);
+
+        when(preferenceRepository.findByUserId("45")).thenReturn(Optional.empty());
+        when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(restTemplate.exchange(
+                anyString(),
+                eq(HttpMethod.GET),
+                argThat(entity -> !entity.getHeaders().containsKey("X-Internal-Service-Token")),
+                eq(AuthContactPreferencesDto.class)))
+                .thenReturn(ResponseEntity.ok(authPreference));
+
+        NotificationPreference result = authAwareService.getPreference("45");
+
+        assertEquals("blank-token@example.com", result.getEmail());
+        assertFalse(result.isEmailEnabled());
+        assertTrue(result.isPushEnabled());
+    }
+
+    @Test
+    void testGetPreference_DoesNotSendNullInternalToken() {
+        NotificationServiceImpl authAwareService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                restTemplate,
+                "http://localhost:8081/api/internal/users/",
+                null,
+                new FeatureFlagProperties());
+
+        AuthContactPreferencesDto authPreference = new AuthContactPreferencesDto(
+                46L,
+                "null-token@example.com",
+                "EMAIL",
+                true,
+                true);
+
+        when(preferenceRepository.findByUserId("46")).thenReturn(Optional.empty());
+        when(preferenceRepository.save(any(NotificationPreference.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(restTemplate.exchange(
+                anyString(),
+                eq(HttpMethod.GET),
+                argThat(entity -> !entity.getHeaders().containsKey("X-Internal-Service-Token")),
+                eq(AuthContactPreferencesDto.class)))
+                .thenReturn(ResponseEntity.ok(authPreference));
+
+        NotificationPreference result = authAwareService.getPreference("46");
+
+        assertEquals("null-token@example.com", result.getEmail());
     }
 
     @Test
@@ -438,5 +591,115 @@ class NotificationServiceImplTest {
 
         verify(repository, never()).save(any());
         verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
+    }
+
+    @Test
+    void testSendNotification_FeatureFlagPushDisabled() {
+        FeatureFlagProperties flags = new FeatureFlagProperties();
+        flags.setPushNotificationEnabled(false);
+        NotificationServiceImpl pushDisabledService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                restTemplate,
+                "",
+                "token",
+                flags);
+
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId("user1");
+        pref.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("user1")).thenReturn(Optional.of(pref));
+
+        pushDisabledService.sendNotification("user1", "Message", "TYPE");
+
+        verify(repository, never()).save(any());
+        verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
+    }
+
+    @Test
+    void testCreateWalletNotification_UserIdNullOrBlankIgnored() {
+        service.createWalletNotification(new WalletNotificationEvent(
+                null,
+                "TOPUP",
+                BigDecimal.TEN,
+                "ignored",
+                (String) null));
+        service.createWalletNotification(new WalletNotificationEvent(
+                " ",
+                "TOPUP",
+                BigDecimal.TEN,
+                "ignored",
+                (String) null));
+
+        verify(repository, never()).save(any());
+        verify(messagingTemplate, never()).convertAndSend(anyString(), anyString());
+    }
+
+    @Test
+    void testCreateWalletNotification_BlankTypeNullAmountAndBlankDescriptionUsesDefaults() {
+        String userId = "wallet-default";
+        WalletNotificationEvent event = new WalletNotificationEvent(
+                userId,
+                " ",
+                null,
+                " ",
+                (String) null);
+
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId(userId);
+        pref.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId(userId)).thenReturn(Optional.of(pref));
+
+        service.createWalletNotification(event);
+
+        verify(repository).save(argThat(n ->
+                userId.equals(n.getUserId())
+                        && "WALLET".equals(n.getType())
+                        && n.getMessage().contains("Rp0")
+                        && !n.getMessage().contains(".  ")));
+        verify(messagingTemplate).convertAndSend(
+                eq("/topic/notifications/" + userId),
+                eq("Wallet WALLET sebesar Rp0"));
+    }
+
+    @Test
+    void testCreateWalletNotification_NullTypeAndNullDescriptionUsesDefaults() {
+        String userId = "wallet-null-type";
+        WalletNotificationEvent event = new WalletNotificationEvent(
+                userId,
+                null,
+                BigDecimal.valueOf(5000),
+                null,
+                (String) null);
+
+        NotificationPreference pref = new NotificationPreference();
+        pref.setUserId(userId);
+        pref.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId(userId)).thenReturn(Optional.of(pref));
+
+        service.createWalletNotification(event);
+
+        verify(repository).save(argThat(n ->
+                userId.equals(n.getUserId())
+                        && "WALLET".equals(n.getType())
+                        && "Wallet WALLET sebesar Rp5.000".equals(n.getMessage())));
+    }
+
+    @Test
+    void testWalletNotificationEventWithNullLocalDateTimeKeepsTimestampNull() {
+        WalletNotificationEvent event = new WalletNotificationEvent(
+                "user1",
+                "TOPUP",
+                BigDecimal.TEN,
+                "description",
+                (LocalDateTime) null);
+
+        assertNull(event.getTimestamp());
     }
 }
