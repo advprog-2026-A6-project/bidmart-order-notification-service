@@ -88,5 +88,10 @@ sonarqube {
         property("sonar.projectKey", System.getenv("SONAR_PROJECT_KEY"))
         property("sonar.organization", System.getenv("SONAR_ORGANIZATION"))
         property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.sources", "src/main")
+        property("sonar.tests", "src/test")
+        property("sonar.java.binaries", "build/classes")
+        property("sonar.junit.reportPaths", "build/test-results/test")
+        property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
     }
 }
