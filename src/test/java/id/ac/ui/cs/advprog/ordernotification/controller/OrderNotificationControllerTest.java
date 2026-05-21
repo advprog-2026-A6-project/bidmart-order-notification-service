@@ -19,7 +19,6 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -56,6 +55,36 @@ class OrderNotificationControllerTest {
     }
 
     @Test
+    void testHandleAuctionFinishRejectsMissingPayloadField() throws Exception {
+        mockMvc.perform(post("/api/order-notification/auction-finish")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"auctionId\": 101, \"winnerId\": \"user123\", \"finalPrice\": 2500}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Field 'itemName' is required"));
+    }
+
+    @Test
+    void testHandleAuctionFinishRejectsInvalidNumericPayloadField() throws Exception {
+        mockMvc.perform(post("/api/order-notification/auction-finish")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                        "{\"auctionId\": \"abc\", \"winnerId\": \"user123\", \"itemName\": \"M3 MacBook\", \"finalPrice\": 2500}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Field 'auctionId' must be a valid number"));
+    }
+
+    @Test
+    void testHandleAuctionFinishAcceptsNumericPayloadAsString() throws Exception {
+        mockMvc.perform(post("/api/order-notification/auction-finish")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                        "{\"auctionId\": \"101\", \"winnerId\": \"user123\", \"itemName\": \"M3 MacBook\", \"finalPrice\": \"2500\"}"))
+                .andExpect(status().isOk());
+
+        verify(orderService).createAutomaticOrder(101L, "user123", "M3 MacBook", 2500.0);
+    }
+
+    @Test
     void testSimulateAuctionWonCreatesNotificationAndOrder() throws Exception {
         Order order = new Order();
         order.setId(9L);
@@ -75,6 +104,80 @@ class OrderNotificationControllerTest {
 
         verify(notificationService).createAuctionWonNotification(any());
         verify(orderService).createAutomaticOrder(101L, "user123", "M3 MacBook", 2500.0);
+    }
+
+    @Test
+    void testSimulateAuctionWonCreatesOrderWithoutSellerId() throws Exception {
+        Order order = new Order();
+        order.setId(10L);
+        order.setStatus("PAID");
+
+        when(orderService.createAutomaticOrder(102L, "user456", "Camera", 4500.0)).thenReturn(order);
+
+        mockMvc.perform(post("/api/order-notification/simulate/auction-won")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"auctionId": 102, "winnerId": "user456", "itemName": "Camera", "finalPrice": 4500}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId").value(10));
+    }
+
+    @Test
+    void testSimulateAuctionWonRejectsInvalidPayload() throws Exception {
+        mockMvc.perform(post("/api/order-notification/simulate/auction-won")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"auctionId": 101, "winnerId": "user123", "itemName": "M3 MacBook", "finalPrice": "oops"}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Field 'finalPrice' must be a valid number"));
+    }
+
+    @Test
+    void testSimulationEndpointsReturnNotFoundWhenDisabled() throws Exception {
+        when(featureFlags.isSimulationEndpointsEnabled()).thenReturn(false);
+
+        mockMvc.perform(post("/api/order-notification/simulate/bid-placed")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/order-notification/simulate/outbid")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/order-notification/simulate/auction-won")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testSimulateBidPlaced() throws Exception {
+        mockMvc.perform(post("/api/order-notification/simulate/bid-placed")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"auctionId": 101, "sellerId": "seller1", "bidderId": "bidder1", "itemName": "M3 MacBook", "bidAmount": 2500}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("BID_PLACED_NOTIFICATION_SENT"));
+
+        verify(notificationService).createAuctionBidNotification(any());
+    }
+
+    @Test
+    void testSimulateOutbid() throws Exception {
+        mockMvc.perform(post("/api/order-notification/simulate/outbid")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"auctionId": 101, "bidderId": "bidder1", "itemName": "M3 MacBook", "newBidAmount": 3000}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OUTBID_NOTIFICATION_SENT"));
+
+        verify(notificationService).createAuctionOutbidNotification(any());
     }
 
     @Test

@@ -760,6 +760,69 @@ class NotificationServiceImplTest {
     }
 
     @Test
+    void testCreateAuctionBidNotificationWithoutAuctionIdStillNotifiesSeller() {
+        AuctionEventMessage event = new AuctionEventMessage(
+                4L,
+                "BidPlaced",
+                LocalDateTime.now(),
+                Map.of(
+                        "sellerId", "sellerOnly",
+                        "itemName", "Laptop",
+                        "bidderId", "bidder2",
+                        "bidAmount", 150000
+                ));
+
+        NotificationPreference sellerPreference = new NotificationPreference();
+        sellerPreference.setUserId("sellerOnly");
+        sellerPreference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("sellerOnly")).thenReturn(Optional.of(sellerPreference));
+
+        service.createAuctionBidNotification(event);
+
+        verify(repository).save(argThat(n ->
+                "sellerOnly".equals(n.getUserId()) && "AUCTION_BID_PLACED".equals(n.getType())));
+        verify(messagingTemplate, never()).convertAndSend(startsWith("/topic/auctions/"), any(Object.class));
+        verify(auctionParticipantRepository, never()).findByAuctionId(anyLong());
+        verify(auctionParticipantRepository, never()).save(any(AuctionParticipant.class));
+    }
+
+    @Test
+    void testCreateAuctionBidNotificationFiltersBlankAndCurrentBidderRecipients() {
+        AuctionEventMessage event = new AuctionEventMessage(
+                5L,
+                "BidPlaced",
+                LocalDateTime.now(),
+                Map.of(
+                        "auctionId", 30,
+                        "itemName", "Laptop",
+                        "bidderId", "bidder2",
+                        "bidAmount", 150000
+                ));
+
+        NotificationPreference otherPreference = new NotificationPreference();
+        otherPreference.setUserId("otherBidder");
+        otherPreference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("otherBidder")).thenReturn(Optional.of(otherPreference));
+        when(auctionParticipantRepository.findByAuctionId(30L))
+                .thenReturn(List.of(
+                        new AuctionParticipant(30L, ""),
+                        new AuctionParticipant(30L, "bidder2"),
+                        new AuctionParticipant(30L, "otherBidder")
+                ));
+        when(auctionParticipantRepository.findByAuctionIdAndUserId(30L, "bidder2"))
+                .thenReturn(Optional.of(new AuctionParticipant(30L, "bidder2")));
+
+        service.createAuctionBidNotification(event);
+
+        verify(repository).save(argThat(n ->
+                "otherBidder".equals(n.getUserId()) && "AUCTION_BID_PLACED".equals(n.getType())));
+        verify(repository, never()).save(argThat(n -> "bidder2".equals(n.getUserId())));
+        verify(auctionParticipantRepository, never()).save(any(AuctionParticipant.class));
+    }
+
+    @Test
     void testCreateAuctionOutbidNotification() {
         AuctionEventMessage event = new AuctionEventMessage(
                 2L,
@@ -786,6 +849,13 @@ class NotificationServiceImplTest {
     }
 
     @Test
+    void testCreateAuctionOutbidNotificationIgnoresNullEvent() {
+        service.createAuctionOutbidNotification(null);
+
+        verify(repository, never()).save(argThat(n -> "AUCTION_OUTBID".equals(n.getType())));
+    }
+
+    @Test
     void testCreateAuctionWonNotification() {
         AuctionFinishedMessage message = new AuctionFinishedMessage(
                 12L,
@@ -805,6 +875,103 @@ class NotificationServiceImplTest {
 
         verify(repository).save(argThat(n ->
                 "winner1".equals(n.getUserId()) && "AUCTION_WON".equals(n.getType())));
+    }
+
+    @Test
+    void testCreateAuctionWonNotificationUsesFallbackItemAndZeroPrice() {
+        AuctionFinishedMessage message = new AuctionFinishedMessage(
+                13L,
+                "winnerFallback",
+                "seller1",
+                null,
+                null,
+                6L);
+
+        NotificationPreference preference = new NotificationPreference();
+        preference.setUserId("winnerFallback");
+        preference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("winnerFallback")).thenReturn(Optional.of(preference));
+
+        service.createAuctionWonNotification(message);
+
+        verify(repository).save(argThat(n ->
+                "winnerFallback".equals(n.getUserId())
+                        && "AUCTION_WON".equals(n.getType())
+                        && n.getMessage().contains("lelang ini")
+                        && n.getMessage().contains("Rp0")));
+    }
+
+    @Test
+    void testAuctionNotificationsWithDisabledWebsocketAndNoParticipantRepository() {
+        FeatureFlagProperties flags = new FeatureFlagProperties();
+        flags.setWebsocketLiveUpdates(false);
+        NotificationServiceImpl serviceWithoutParticipantRepository = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                Optional.empty(),
+                restTemplate,
+                "",
+                "bidmart-internal-dev-token",
+                flags);
+
+        AuctionEventMessage event = new AuctionEventMessage(
+                6L,
+                "BidPlaced",
+                LocalDateTime.now(),
+                Map.of(
+                        "auctionId", 44,
+                        "sellerId", "sellerNoRepo",
+                        "itemName", "Laptop",
+                        "bidderId", "bidder2",
+                        "bidAmount", 150000
+                ));
+
+        NotificationPreference sellerPreference = new NotificationPreference();
+        sellerPreference.setUserId("sellerNoRepo");
+        sellerPreference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("sellerNoRepo")).thenReturn(Optional.of(sellerPreference));
+
+        serviceWithoutParticipantRepository.createAuctionBidNotification(event);
+
+        verify(repository).save(argThat(n ->
+                "sellerNoRepo".equals(n.getUserId()) && "AUCTION_BID_PLACED".equals(n.getType())));
+        verify(messagingTemplate, never()).convertAndSend(eq("/topic/auctions/44"), eq(event));
+        verify(auctionParticipantRepository, never()).findByAuctionId(44L);
+    }
+
+    @Test
+    void testSendNotificationSkipsDisabledChannels() {
+        FeatureFlagProperties flags = new FeatureFlagProperties();
+        flags.setPushNotificationEnabled(false);
+        flags.setEmailNotificationEnabled(false);
+        NotificationServiceImpl disabledChannelService = new NotificationServiceImpl(
+                repository,
+                preferenceRepository,
+                emailService,
+                messagingTemplate,
+                Optional.empty(),
+                Optional.of(auctionParticipantRepository),
+                restTemplate,
+                "",
+                "bidmart-internal-dev-token",
+                flags);
+
+        NotificationPreference preference = new NotificationPreference();
+        preference.setUserId("quietUser");
+        preference.setEmail("quiet@example.com");
+        preference.setEmailEnabled(true);
+        preference.setPushEnabled(true);
+
+        when(preferenceRepository.findByUserId("quietUser")).thenReturn(Optional.of(preference));
+
+        disabledChannelService.sendNotification("quietUser", "message", "TEST");
+
+        verify(repository, never()).save(argThat(n -> "quietUser".equals(n.getUserId())));
     }
 
     @Test

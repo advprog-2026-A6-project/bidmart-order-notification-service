@@ -68,6 +68,13 @@ class AuctionActivityListenerTest {
         verify(notificationService).createAuctionWonNotification(message);
     }
 
+    @Test
+    void handleAuctionWonAcceptsNullMessage() {
+        listener.handleAuctionWon(null);
+
+        verify(notificationService).createAuctionWonNotification(null);
+    }
+
     private AuctionEventMessage event(String type) {
         return new AuctionEventMessage(1L, type, LocalDateTime.now(), Map.of("auctionId", 10L));
     }

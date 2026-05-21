@@ -70,4 +70,12 @@ class PageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("auctionFinish"));
     }
+
+    @Test
+    void testSimulatePageReturnsNotFoundWhenDisabled() throws Exception {
+        when(featureFlags.isSimulationEndpointsEnabled()).thenReturn(false);
+
+        mockMvc.perform(get("/simulate"))
+                .andExpect(status().isNotFound());
+    }
 }

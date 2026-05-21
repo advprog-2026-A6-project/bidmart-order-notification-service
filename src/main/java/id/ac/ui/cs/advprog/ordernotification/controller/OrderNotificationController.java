@@ -36,11 +36,19 @@ public class OrderNotificationController {
     }
 
     @PostMapping("/auction-finish")
-    public ResponseEntity<Order> handleAuctionFinish(@RequestBody Map<String, Object> payload) {
-        Long auctionId = Long.valueOf(payload.get("auctionId").toString());
-        String userId = payload.get("winnerId").toString();
-        String itemName = payload.get("itemName").toString();
-        Double finalPrice = Double.valueOf(payload.get("finalPrice").toString());
+    public ResponseEntity<?> handleAuctionFinish(@RequestBody Map<String, Object> payload) {
+        Long auctionId;
+        String userId;
+        String itemName;
+        Double finalPrice;
+        try {
+            auctionId = requiredLong(payload, "auctionId");
+            userId = requiredString(payload, "winnerId");
+            itemName = requiredString(payload, "itemName");
+            finalPrice = requiredDouble(payload, "finalPrice");
+        } catch (IllegalArgumentException exception) {
+            return badRequest(exception.getMessage());
+        }
 
         Order order = orderService.createAutomaticOrder(auctionId, userId, itemName, finalPrice);
         return ResponseEntity.ok(order);
@@ -134,7 +142,7 @@ public class OrderNotificationController {
     }
 
     @PostMapping("/simulate/bid-placed")
-    public ResponseEntity<Map<String, String>> simulateBidPlaced(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> simulateBidPlaced(@RequestBody Map<String, Object> payload) {
         if (!featureFlags.isSimulationEndpointsEnabled()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
@@ -148,7 +156,7 @@ public class OrderNotificationController {
     }
 
     @PostMapping("/simulate/outbid")
-    public ResponseEntity<Map<String, String>> simulateOutbid(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> simulateOutbid(@RequestBody Map<String, Object> payload) {
         if (!featureFlags.isSimulationEndpointsEnabled()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
@@ -162,18 +170,23 @@ public class OrderNotificationController {
     }
 
     @PostMapping("/simulate/auction-won")
-    public ResponseEntity<Map<String, Object>> simulateAuctionWon(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> simulateAuctionWon(@RequestBody Map<String, Object> payload) {
         if (!featureFlags.isSimulationEndpointsEnabled()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
-        AuctionFinishedMessage message = new AuctionFinishedMessage(
-                Long.valueOf(payload.get("auctionId").toString()),
-                payload.get("winnerId").toString(),
-                payload.get("sellerId") == null ? null : payload.get("sellerId").toString(),
-                payload.get("itemName").toString(),
-                Double.valueOf(payload.get("finalPrice").toString()),
-                null
-        );
+        AuctionFinishedMessage message;
+        try {
+            message = new AuctionFinishedMessage(
+                    requiredLong(payload, "auctionId"),
+                    requiredString(payload, "winnerId"),
+                    optionalString(payload, "sellerId"),
+                    requiredString(payload, "itemName"),
+                    requiredDouble(payload, "finalPrice"),
+                    null
+            );
+        } catch (IllegalArgumentException exception) {
+            return badRequest(exception.getMessage());
+        }
         notificationService.createAuctionWonNotification(message);
         Order order = orderService.createAutomaticOrder(
                 message.getAuctionId(),
@@ -186,5 +199,46 @@ public class OrderNotificationController {
                 "orderId", order.getId(),
                 "orderStatus", order.getStatus()
         ));
+    }
+
+    private ResponseEntity<Map<String, String>> badRequest(String message) {
+        return ResponseEntity.badRequest().body(Map.of("error", message));
+    }
+
+    private String requiredString(Map<String, Object> payload, String field) {
+        Object value = payload.get(field);
+        if (value == null || value.toString().isBlank()) {
+            throw new IllegalArgumentException("Field '" + field + "' is required");
+        }
+        return value.toString();
+    }
+
+    private String optionalString(Map<String, Object> payload, String field) {
+        Object value = payload.get(field);
+        return value == null || value.toString().isBlank() ? null : value.toString();
+    }
+
+    private Long requiredLong(Map<String, Object> payload, String field) {
+        Object value = payload.get(field);
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.valueOf(requiredString(payload, field));
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Field '" + field + "' must be a valid number", exception);
+        }
+    }
+
+    private Double requiredDouble(Map<String, Object> payload, String field) {
+        Object value = payload.get(field);
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        try {
+            return Double.valueOf(requiredString(payload, field));
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Field '" + field + "' must be a valid number", exception);
+        }
     }
 }
