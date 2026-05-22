@@ -68,7 +68,7 @@ Dengan minimal tiga design pattern yang digunakan secara tepat, ditambah narasi 
 | Unit Testing | Test service, controller, listener, repository, delivery strategy |
 | Functional Testing | `NotificationFunctionalTest` menguji alur end-to-end melalui Spring context dan MockMvc |
 | Regression Testing | `./gradlew.bat check` menjalankan test, Checkstyle, SpotBugs, dan JaCoCo |
-| Secure Coding | Endpoint simulasi dilindungi feature flag dan default mati di production |
+| Secure Coding | Credential dan konfigurasi sensitif dibaca dari environment variable; CORS dibatasi ke origin local dan frontend Vercel yang digunakan |
 | Profiling | `PerformanceProfilingTest` membandingkan implementasi lama stream filtering dengan query repository terindeks |
 | Static Analysis | Checkstyle dan SpotBugs aktif pada Gradle check |
 | Dependency Security | Frontend production dependency diaudit dengan `npm audit --omit=dev --audit-level=high` dan hasilnya 0 vulnerabilities |
@@ -152,6 +152,59 @@ Bukti dari `PERFORMANCE_REPORT.md`:
 ```java
 assertTrue(speedupPercentage >= 50.0)
 ```
+
+Hasil eksekusi terakhir `PerformanceProfilingTest` yang digunakan sebagai bukti profiling:
+
+| Item | Hasil |
+| --- | --- |
+| Test class | `PerformanceProfilingTest` |
+| Test method | `profileAndComparePerformance()` |
+| Jumlah test | 1 |
+| Failure | 0 |
+| Ignored | 0 |
+| Durasi | 1.424s |
+| Status | 100% successful / passed |
+
+Report HTML lokal tersedia di:
+
+```text
+build/reports/tests/test/classes/id.ac.ui.cs.advprog.ordernotification.performance.PerformanceProfilingTest.html
+```
+
+Bukti screenshot disimpan pada:
+
+```text
+performance-evidence/screenshots/performance-profiling-test.png
+```
+
+![Performance Profiling Test](performance-evidence/screenshots/performance-profiling-test.png)
+
+### Bukti Observability Prometheus
+
+Prometheus berhasil mengambil metrik dari endpoint actuator modul Order Notification:
+
+| Item | Hasil |
+| --- | --- |
+| Prometheus URL | `http://localhost:9090/targets` |
+| Scrape pool | `bidmart-order-notification-service` |
+| Endpoint | `http://host.docker.internal:8085/actuator/prometheus` |
+| Target status | `1/1 up` |
+| State | `UP` |
+| Last scrape | sekitar 7 detik sebelum screenshot |
+| Scrape duration | sekitar 147 ms |
+
+Bukti ini menunjukkan endpoint `/actuator/prometheus` sudah dapat di-scrape oleh Prometheus dan siap divisualisasikan di Grafana.
+
+Bukti screenshot Prometheus dan Grafana disimpan pada:
+
+```text
+performance-evidence/screenshots/prometheus-target-up.png
+performance-evidence/screenshots/grafana-dashboard.png
+```
+
+![Prometheus Target Up](performance-evidence/screenshots/prometheus-target-up.png)
+
+![Grafana Dashboard](performance-evidence/screenshots/grafana-dashboard.png)
 
 Artinya peningkatan performa minimal 50% diverifikasi otomatis melalui test. Dengan coverage di atas 90%, static analysis, functional testing, secure coding, profiling, dan optimasi lebih dari 50%, modul ini memenuhi target Software Quality skala 4.
 
