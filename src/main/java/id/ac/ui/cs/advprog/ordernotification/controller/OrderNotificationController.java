@@ -5,7 +5,6 @@ import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.AuctionEventMessage;
 import id.ac.ui.cs.advprog.ordernotification.model.AuctionFinishedMessage;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
-import id.ac.ui.cs.advprog.ordernotification.config.FeatureFlagProperties;
 import id.ac.ui.cs.advprog.ordernotification.service.NotificationService;
 import id.ac.ui.cs.advprog.ordernotification.service.OrderService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -30,16 +29,13 @@ public class OrderNotificationController {
 
     private final OrderService orderService;
     private final NotificationService notificationService;
-    private final FeatureFlagProperties featureFlags;
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public OrderNotificationController(
             OrderService orderService,
-            NotificationService notificationService,
-            FeatureFlagProperties featureFlags) {
+            NotificationService notificationService) {
         this.orderService = orderService;
         this.notificationService = notificationService;
-        this.featureFlags = featureFlags;
     }
 
     @PostMapping("/auction-finish")
@@ -150,9 +146,6 @@ public class OrderNotificationController {
 
     @PostMapping("/simulate/bid-placed")
     public ResponseEntity<Object> simulateBidPlaced(@RequestBody Map<String, Object> payload) {
-        if (!featureFlags.isSimulationEndpointsEnabled()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
         notificationService.createAuctionBidNotification(new AuctionEventMessage(
                 null,
                 "BidPlaced",
@@ -164,9 +157,6 @@ public class OrderNotificationController {
 
     @PostMapping("/simulate/outbid")
     public ResponseEntity<Object> simulateOutbid(@RequestBody Map<String, Object> payload) {
-        if (!featureFlags.isSimulationEndpointsEnabled()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
         notificationService.createAuctionOutbidNotification(new AuctionEventMessage(
                 null,
                 "Outbid",
@@ -178,9 +168,6 @@ public class OrderNotificationController {
 
     @PostMapping("/simulate/auction-won")
     public ResponseEntity<Object> simulateAuctionWon(@RequestBody Map<String, Object> payload) {
-        if (!featureFlags.isSimulationEndpointsEnabled()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
         AuctionFinishedMessage message;
         try {
             message = new AuctionFinishedMessage(

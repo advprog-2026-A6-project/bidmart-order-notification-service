@@ -10,7 +10,6 @@ public class FeatureFlagProperties {
     private boolean emailNotificationEnabled = true;
     private boolean pushNotificationEnabled = true;
     private boolean websocketLiveUpdates = true;
-    private boolean simulationEndpointsEnabled = false;
 
     public boolean isEmailNotificationEnabled() {
         return emailNotificationEnabled;
@@ -36,11 +35,4 @@ public class FeatureFlagProperties {
         this.websocketLiveUpdates = websocketLiveUpdates;
     }
 
-    public boolean isSimulationEndpointsEnabled() {
-        return simulationEndpointsEnabled;
-    }
-
-    public void setSimulationEndpointsEnabled(boolean simulationEndpointsEnabled) {
-        this.simulationEndpointsEnabled = simulationEndpointsEnabled;
-    }
 }
