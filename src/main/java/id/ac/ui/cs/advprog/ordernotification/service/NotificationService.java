@@ -17,6 +17,7 @@ public interface NotificationService {
     NotificationPreference setPreference(String userId, String email, boolean emailEnabled, boolean pushEnabled);
     NotificationPreference getPreference(String userId);
     void sendNotification(String userId, String message, String type);
+    void sendNotification(String userId, String pushMessage, String emailMessage, String type);
     void createWalletNotification(WalletNotificationEvent event);
     void createAuctionBidNotification(AuctionEventMessage event);
     void createAuctionOutbidNotification(AuctionEventMessage event);

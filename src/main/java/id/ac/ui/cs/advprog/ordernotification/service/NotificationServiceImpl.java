@@ -135,23 +135,14 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         NotificationPreference pref = getPreference(order.getUserId());
-        String messageBody = "Order #" + order.getId() + " untuk " + order.getItemName() + " telah dibuat.";
+        String messageBody = "Order #" + order.getId() + " untuk " + safeItemName(order.getItemName()) + " telah dibuat.";
 
         if (featureFlags.isPushNotificationEnabled() && pref.isPushEnabled()) {
             executeDelivery("PUSH", order.getUserId(), messageBody, NOTIF_TYPE_ORDER_CREATED, null);
         }
 
         if (featureFlags.isEmailNotificationEnabled() && pref.getEmail() != null && !pref.getEmail().isEmpty() && pref.isEmailEnabled()) {
-            String emailContent = "Yth. Pengguna BidMart,\n\n" +
-                    "Selamat! Anda telah memenangkan lelang dan pesanan Anda telah berhasil dibuat secara otomatis melalui sistem BidMart.\n\n" +
-                    "Detail Pesanan:\n" +
-                    "- ID Pesanan: #" + order.getId() + "\n" +
-                    "- Nama Barang: " + order.getItemName() + "\n" +
-                    "- Total Harga: Rp" + String.format("%,.0f", order.getTotalPrice()) + "\n\n" +
-                    "Status: SEDANG DIPROSES\n\n" +
-                    "Terima kasih telah bertransaksi di BidMart. Jika Anda memiliki pertanyaan, silakan hubungi tim bantuan kami.\n\n" +
-                    "Salam hangat,\n" +
-                    "BidMart";
+            String emailContent = buildOrderCreatedEmailContent(order);
             executeDelivery("EMAIL", order.getUserId(), emailContent, NOTIF_TYPE_ORDER_CREATED, pref.getEmail());
         } else if (pref.isEmailEnabled()) {
             Notification emailErrorNotif = NotificationFactory.createEmailErrorNotification(
@@ -161,6 +152,21 @@ public class NotificationServiceImpl implements NotificationService {
             );
             repository.save(emailErrorNotif);
         }
+    }
+
+    private String buildOrderCreatedEmailContent(Order order) {
+        return "Yth. Pengguna BidMart,\n\n" +
+                "Selamat! Anda telah memenangkan lelang dan pesanan Anda telah berhasil dibuat secara otomatis melalui sistem BidMart.\n\n" +
+                "Detail Pesanan:\n" +
+                "- ID Pesanan: #" + order.getId() + "\n" +
+                "- Nama Barang: " + safeItemName(order.getItemName()) + "\n" +
+                "- Total Harga: " + formatRupiah(BigDecimal.valueOf(order.getTotalPrice() == null ? 0 : order.getTotalPrice())) + "\n\n" +
+                "Status: SEDANG DIPROSES\n\n" +
+                "Penjual akan menyiapkan barang dan memperbarui status pengiriman melalui sistem BidMart. " +
+                "Anda akan menerima notifikasi berikutnya ketika barang sudah dikemas atau dikirim beserta nomor resinya.\n\n" +
+                "Terima kasih telah bertransaksi di BidMart. Jika Anda memiliki pertanyaan, silakan hubungi tim bantuan kami.\n\n" +
+                "Salam hangat,\n" +
+                "BidMart";
     }
 
     @Override
@@ -189,15 +195,20 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendNotification(String userId, String message, String type) {
+        sendNotification(userId, message, message, type);
+    }
+
+    @Override
+    public void sendNotification(String userId, String pushMessage, String emailMessage, String type) {
         NotificationPreference pref = getPreference(userId);
         if (featureFlags.isPushNotificationEnabled() && pref.isPushEnabled()) {
-            executeDelivery("PUSH", userId, message, type, null);
+            executeDelivery("PUSH", userId, pushMessage, type, null);
         }
         if (featureFlags.isEmailNotificationEnabled()
                 && pref.isEmailEnabled()
                 && pref.getEmail() != null
                 && !pref.getEmail().isBlank()) {
-            executeDelivery("EMAIL", userId, message, type, pref.getEmail());
+            executeDelivery("EMAIL", userId, emailMessage, type, pref.getEmail());
         }
     }
 
