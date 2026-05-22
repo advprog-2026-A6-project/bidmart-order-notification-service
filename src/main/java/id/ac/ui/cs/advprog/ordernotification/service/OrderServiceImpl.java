@@ -5,7 +5,11 @@ import id.ac.ui.cs.advprog.ordernotification.repository.OrderRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -104,8 +108,7 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("COMPLETED");
         Order savedOrder = orderRepository.save(order);
 
-        String message = ORDER_MESSAGE_PREFIX + savedOrder.getId()
-                + " (" + savedOrder.getItemName() + ") telah selesai. Terima kasih!";
+        String message = buildReceiptConfirmedMessage(savedOrder);
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_COMPLETED");
         
         return savedOrder;
@@ -123,5 +126,37 @@ public class OrderServiceImpl implements OrderService {
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_DISPUTED");
         
         return savedOrder;
+    }
+
+    private String buildReceiptConfirmedMessage(Order order) {
+        return "Yth. Pengguna BidMart,\n\n" +
+                "Kami mengonfirmasi bahwa barang untuk pesanan Anda telah diterima dan transaksi telah selesai di sistem BidMart.\n\n" +
+                "Detail Pesanan:\n" +
+                "- ID Pesanan: #" + order.getId() + "\n" +
+                "- Nama Barang: " + safeItemName(order.getItemName()) + "\n" +
+                "- Total Harga: " + formatRupiah(order.getTotalPrice()) + "\n" +
+                "- Nomor Resi: " + safeTrackingNumber(order.getTrackingNumber()) + "\n\n" +
+                "Status: SELESAI / BARANG DITERIMA\n\n" +
+                "Terima kasih telah mengonfirmasi penerimaan barang. " +
+                "Jika barang tidak sesuai dengan deskripsi atau terdapat kendala setelah diterima, " +
+                "Anda masih dapat mengajukan sengketa melalui halaman pesanan.\n\n" +
+                "Salam hangat,\n" +
+                "BidMart";
+    }
+
+    private String safeItemName(String itemName) {
+        return (itemName == null || itemName.isBlank()) ? "Barang lelang" : itemName.trim();
+    }
+
+    private String safeTrackingNumber(String trackingNumber) {
+        return (trackingNumber == null || trackingNumber.isBlank()) ? "Belum tersedia" : trackingNumber.trim();
+    }
+
+    private String formatRupiah(Double amount) {
+        BigDecimal safeAmount = BigDecimal.valueOf(amount == null ? 0 : amount);
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.forLanguageTag("id-ID"));
+        symbols.setGroupingSeparator('.');
+        DecimalFormat format = new DecimalFormat("'Rp'#,##0", symbols);
+        return format.format(safeAmount);
     }
 }
