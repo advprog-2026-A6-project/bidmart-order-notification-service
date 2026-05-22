@@ -42,7 +42,7 @@ Modul ini menggunakan lebih dari tiga design pattern yang sesuai dengan kebutuha
 | Status pengiriman | Status pengiriman langsung ke `SHIPPED` ketika resi diisi | Ditambahkan tahap `PACKED` agar sesuai use case penjual memperbarui barang menjadi dikemas sebelum dikirim |
 | Pengiriman notifikasi | Risiko logic pengiriman channel bercampur di service | Dipisah dengan Strategy Pattern untuk push dan email |
 | Live update | Pengguna perlu refresh halaman untuk memastikan ada update terbaru | WebSocket topic `/topic/notifications/{userId}` dan `/topic/auctions/{auctionId}` mengirim update real-time |
-| Keamanan fitur demo | Endpoint simulasi bisa berbahaya jika terbuka di production | Ditambahkan feature flag `feature.simulation-endpoints-enabled`, default mati di production dan aktif di profile dev |
+| Kejelasan fitur demo | Halaman simulasi sempat bergantung pada konfigurasi environment sehingga mudah memunculkan 404 saat demo | Halaman dan endpoint simulasi dibuat selalu tersedia agar alur bid, outbid, dan winner bisa dibuktikan konsisten di local maupun deploy |
 
 ### Dampak Non-Functional Requirement
 
@@ -51,7 +51,7 @@ Perbaikan desain tidak hanya menambah fitur, tetapi juga meningkatkan kualitas n
 - Maintainability: controller tetap tipis, logic domain ada di service, dan delivery channel dipisah dalam strategy.
 - Extensibility: channel notifikasi dan event baru dapat ditambahkan tanpa mengubah alur utama order.
 - Reliability: event dari modul lain diproses melalui RabbitMQ listener sehingga modul tidak perlu berbagi state.
-- Security: endpoint simulasi dimatikan secara default pada production profile.
+- Operability: halaman simulasi dapat dipakai untuk demo manual tanpa bergantung pada environment variable tambahan.
 - Responsiveness: WebSocket memberi update langsung tanpa refresh manual.
 
 Dengan minimal tiga design pattern yang digunakan secara tepat, ditambah narasi before-after dan peningkatan maintainability, extensibility, reliability, security, serta responsiveness, modul ini memenuhi target Software Design skala 4.
@@ -194,25 +194,13 @@ Manfaat architecture tambahan disimulasikan melalui testing dan profiling:
 | --- | --- | --- |
 | WebSocket Pub/Sub | Functional flow notifikasi dan frontend live update | User menerima update tanpa refresh manual |
 | RabbitMQ Listener | Listener test untuk auction finished, bid placed, outbid, auction won | Modul dapat bereaksi terhadap event lintas service |
-| Feature Flag | Test dengan flag simulasi aktif dan default production mati | Endpoint demo tidak terbuka pada production |
+| Halaman Simulasi | Functional test untuk alur simulasi bid, outbid, dan winner | Endpoint demo konsisten tersedia untuk pembuktian integrasi |
 | Indexed Query + Repository | `PerformanceProfilingTest` | Query kritis lebih cepat lebih dari 50% |
 | Delivery Strategy | Unit test push/email strategy | Delivery channel terpisah dan dapat diuji mandiri |
 
 ### Security dan Load-Oriented Architecture Reasoning
 
-Feature flag dipakai sebagai security control untuk membedakan kebutuhan demo lokal dan production. Endpoint simulasi berguna untuk pembuktian use case, tetapi berbahaya jika terbuka di production karena dapat membuat notifikasi atau order palsu. Karena itu:
-
-```properties
-feature.simulation-endpoints-enabled=false
-```
-
-menjadi default pada konfigurasi utama dan production, sedangkan:
-
-```properties
-feature.simulation-endpoints-enabled=true
-```
-
-hanya aktif di development profile.
+Endpoint simulasi dipakai sebagai alat pembuktian manual untuk reviewer dan integrasi kelompok. Endpoint ini tidak menjadi alur utama sistem; integrasi produksi tetap melalui event RabbitMQ dari modul lelang. Dengan begitu, tim dapat membuktikan bid, outbid, winner, pembuatan order, dan notifikasi tanpa menunggu modul lain menjalankan skenario lengkap.
 
 Untuk beban data, pendekatan indexed repository query menggantikan full-table filtering. Simulasi profiling menunjukkan penurunan waktu eksekusi sekitar 81%, sehingga arsitektur data access lebih siap menghadapi peningkatan jumlah notifikasi.
 
@@ -237,4 +225,3 @@ npm.cmd audit --omit=dev --audit-level=high
 ```
 
 Catatan: perintah frontend dijalankan dari repository `bidmart-frontend`.
-

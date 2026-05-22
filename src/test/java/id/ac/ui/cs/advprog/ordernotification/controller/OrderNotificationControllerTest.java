@@ -1,12 +1,10 @@
 package id.ac.ui.cs.advprog.ordernotification.controller;
 
-import id.ac.ui.cs.advprog.ordernotification.config.FeatureFlagProperties;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.service.NotificationService;
 import id.ac.ui.cs.advprog.ordernotification.service.OrderService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -34,14 +32,6 @@ class OrderNotificationControllerTest {
 
     @MockitoBean
     private NotificationService notificationService;
-
-    @MockitoBean
-    private FeatureFlagProperties featureFlags;
-
-    @BeforeEach
-    void setUp() {
-        when(featureFlags.isSimulationEndpointsEnabled()).thenReturn(true);
-    }
 
     @Test
     void testHandleAuctionFinish() throws Exception {
@@ -132,26 +122,6 @@ class OrderNotificationControllerTest {
                         """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Field 'finalPrice' must be a valid number"));
-    }
-
-    @Test
-    void testSimulationEndpointsReturnNotFoundWhenDisabled() throws Exception {
-        when(featureFlags.isSimulationEndpointsEnabled()).thenReturn(false);
-
-        mockMvc.perform(post("/api/order-notification/simulate/bid-placed")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().isNotFound());
-
-        mockMvc.perform(post("/api/order-notification/simulate/outbid")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().isNotFound());
-
-        mockMvc.perform(post("/api/order-notification/simulate/auction-won")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().isNotFound());
     }
 
     @Test
