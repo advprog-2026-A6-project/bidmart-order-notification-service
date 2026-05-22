@@ -235,11 +235,12 @@
             
             document.getElementById('result').style.display = 'block';
             document.getElementById('json-output').innerText = JSON.stringify(data, null, 2);
-            const resultText = currentSimulation === 'won'
-                ? 'Berhasil! Notifikasi menang terkirim dan order otomatis dibuat.'
-                : currentSimulation === 'finish'
-                    ? 'Berhasil! Order otomatis telah dibuat.'
-                    : 'Berhasil! Notifikasi lelang terkirim.';
+            let resultText = 'Berhasil! Notifikasi lelang terkirim.';
+            if (currentSimulation === 'won') {
+                resultText = 'Berhasil! Notifikasi menang terkirim dan order otomatis dibuat.';
+            } else if (currentSimulation === 'finish') {
+                resultText = 'Berhasil! Order otomatis telah dibuat.';
+            }
             document.getElementById('result-message').innerText = resultText;
             showToast("Simulasi berhasil dijalankan.", "success");
         })

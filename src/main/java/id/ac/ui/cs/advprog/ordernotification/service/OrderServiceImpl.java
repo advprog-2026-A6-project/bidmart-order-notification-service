@@ -13,6 +13,7 @@ import java.util.Optional;
 public class OrderServiceImpl implements OrderService {
 
     private static final String ORDER_NOT_FOUND_MSG = "Order not found";
+    private static final String ORDER_MESSAGE_PREFIX = "Pesanan #";
 
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
@@ -76,7 +77,8 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("PACKED");
         Order savedOrder = orderRepository.save(order);
 
-        String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") sedang dikemas.";
+        String message = ORDER_MESSAGE_PREFIX + savedOrder.getId()
+                + " (" + savedOrder.getItemName() + ") sedang dikemas.";
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_PACKED");
 
         return savedOrder;
@@ -89,7 +91,8 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("SHIPPED");
         Order savedOrder = orderRepository.save(order);
 
-        String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah dikirim dengan nomor resi: " + trackingNumber;
+        String message = ORDER_MESSAGE_PREFIX + savedOrder.getId()
+                + " (" + savedOrder.getItemName() + ") telah dikirim dengan nomor resi: " + trackingNumber;
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_SHIPPED");
         
         return savedOrder;
@@ -101,7 +104,8 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("COMPLETED");
         Order savedOrder = orderRepository.save(order);
 
-        String message = "Pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah selesai. Terima kasih!";
+        String message = ORDER_MESSAGE_PREFIX + savedOrder.getId()
+                + " (" + savedOrder.getItemName() + ") telah selesai. Terima kasih!";
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_COMPLETED");
         
         return savedOrder;

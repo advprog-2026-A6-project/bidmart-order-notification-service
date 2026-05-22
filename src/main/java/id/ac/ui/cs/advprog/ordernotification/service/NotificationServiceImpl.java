@@ -320,9 +320,10 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
 
-        AuctionParticipantRepository repository = auctionParticipantRepository.get();
-        repository.findByAuctionIdAndUserId(auctionId, userId)
-                .orElseGet(() -> repository.save(new AuctionParticipant(auctionId, userId)));
+        AuctionParticipantRepository participantRepository = auctionParticipantRepository.get();
+        if (participantRepository.findByAuctionIdAndUserId(auctionId, userId).isEmpty()) {
+            participantRepository.save(new AuctionParticipant(auctionId, userId));
+        }
     }
 
     private void executeDelivery(String channel, String userId, String message, String type, String recipient) {

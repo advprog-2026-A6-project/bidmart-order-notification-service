@@ -21,6 +21,13 @@ import java.util.Map;
 @RequestMapping("/api/order-notification")
 public class OrderNotificationController {
 
+    private static final String AUCTION_ID_FIELD = "auctionId";
+    private static final String FINAL_PRICE_FIELD = "finalPrice";
+    private static final String ITEM_NAME_FIELD = "itemName";
+    private static final String SELLER_ID_FIELD = "sellerId";
+    private static final String STATUS_FIELD = "status";
+    private static final String WINNER_ID_FIELD = "winnerId";
+
     private final OrderService orderService;
     private final NotificationService notificationService;
     private final FeatureFlagProperties featureFlags;
@@ -36,16 +43,16 @@ public class OrderNotificationController {
     }
 
     @PostMapping("/auction-finish")
-    public ResponseEntity<?> handleAuctionFinish(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Object> handleAuctionFinish(@RequestBody Map<String, Object> payload) {
         Long auctionId;
         String userId;
         String itemName;
         Double finalPrice;
         try {
-            auctionId = requiredLong(payload, "auctionId");
-            userId = requiredString(payload, "winnerId");
-            itemName = requiredString(payload, "itemName");
-            finalPrice = requiredDouble(payload, "finalPrice");
+            auctionId = requiredLong(payload, AUCTION_ID_FIELD);
+            userId = requiredString(payload, WINNER_ID_FIELD);
+            itemName = requiredString(payload, ITEM_NAME_FIELD);
+            finalPrice = requiredDouble(payload, FINAL_PRICE_FIELD);
         } catch (IllegalArgumentException exception) {
             return badRequest(exception.getMessage());
         }
@@ -142,7 +149,7 @@ public class OrderNotificationController {
     }
 
     @PostMapping("/simulate/bid-placed")
-    public ResponseEntity<?> simulateBidPlaced(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Object> simulateBidPlaced(@RequestBody Map<String, Object> payload) {
         if (!featureFlags.isSimulationEndpointsEnabled()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
@@ -152,11 +159,11 @@ public class OrderNotificationController {
                 LocalDateTime.now(),
                 payload
         ));
-        return ResponseEntity.ok(Map.of("status", "BID_PLACED_NOTIFICATION_SENT"));
+        return ResponseEntity.ok(Map.of(STATUS_FIELD, "BID_PLACED_NOTIFICATION_SENT"));
     }
 
     @PostMapping("/simulate/outbid")
-    public ResponseEntity<?> simulateOutbid(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Object> simulateOutbid(@RequestBody Map<String, Object> payload) {
         if (!featureFlags.isSimulationEndpointsEnabled()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
@@ -166,22 +173,22 @@ public class OrderNotificationController {
                 LocalDateTime.now(),
                 payload
         ));
-        return ResponseEntity.ok(Map.of("status", "OUTBID_NOTIFICATION_SENT"));
+        return ResponseEntity.ok(Map.of(STATUS_FIELD, "OUTBID_NOTIFICATION_SENT"));
     }
 
     @PostMapping("/simulate/auction-won")
-    public ResponseEntity<?> simulateAuctionWon(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Object> simulateAuctionWon(@RequestBody Map<String, Object> payload) {
         if (!featureFlags.isSimulationEndpointsEnabled()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
         AuctionFinishedMessage message;
         try {
             message = new AuctionFinishedMessage(
-                    requiredLong(payload, "auctionId"),
-                    requiredString(payload, "winnerId"),
-                    optionalString(payload, "sellerId"),
-                    requiredString(payload, "itemName"),
-                    requiredDouble(payload, "finalPrice"),
+                    requiredLong(payload, AUCTION_ID_FIELD),
+                    requiredString(payload, WINNER_ID_FIELD),
+                    optionalString(payload, SELLER_ID_FIELD),
+                    requiredString(payload, ITEM_NAME_FIELD),
+                    requiredDouble(payload, FINAL_PRICE_FIELD),
                     null
             );
         } catch (IllegalArgumentException exception) {
@@ -195,13 +202,13 @@ public class OrderNotificationController {
                 message.getFinalPrice()
         );
         return ResponseEntity.ok(Map.of(
-                "status", "AUCTION_WON_NOTIFICATION_SENT_AND_ORDER_CREATED",
+                STATUS_FIELD, "AUCTION_WON_NOTIFICATION_SENT_AND_ORDER_CREATED",
                 "orderId", order.getId(),
                 "orderStatus", order.getStatus()
         ));
     }
 
-    private ResponseEntity<Map<String, String>> badRequest(String message) {
+    private ResponseEntity<Object> badRequest(String message) {
         return ResponseEntity.badRequest().body(Map.of("error", message));
     }
 

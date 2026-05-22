@@ -91,8 +91,10 @@
                 || normalizedMessage.includes('gagal')
                 || normalizedMessage.includes('failed')
                 || normalizedMessage.includes('error');
-            const isSuccess = normalizedType === 'success' || !isError;
-            const icon = isError ? 'alert-circle' : isSuccess ? 'checkmark-circle' : 'notifications';
+            let icon = 'checkmark-circle';
+            if (isError) {
+                icon = 'alert-circle';
+            }
             const accentColor = isError ? '#ef4444' : '#10b981';
 
             toast.style.cssText = `

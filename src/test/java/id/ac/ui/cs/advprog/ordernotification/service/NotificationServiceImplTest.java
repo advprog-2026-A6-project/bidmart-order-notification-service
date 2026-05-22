@@ -753,7 +753,7 @@ class NotificationServiceImplTest {
         verify(repository).save(argThat(n ->
                 "seller1".equals(n.getUserId()) && "AUCTION_BID_PLACED".equals(n.getType())));
         verify(repository, never()).save(argThat(n -> "bidder2".equals(n.getUserId())));
-        verify(messagingTemplate).convertAndSend(eq("/topic/auctions/10"), eq(event));
+        verify(messagingTemplate).convertAndSend("/topic/auctions/10", event);
         verify(auctionParticipantRepository).save(argThat(participant ->
                 Long.valueOf(10L).equals(participant.getAuctionId())
                         && "bidder2".equals(participant.getUserId())));
@@ -845,7 +845,7 @@ class NotificationServiceImplTest {
 
         verify(repository).save(argThat(n ->
                 "oldWinner".equals(n.getUserId()) && "AUCTION_OUTBID".equals(n.getType())));
-        verify(messagingTemplate).convertAndSend(eq("/topic/auctions/11"), eq(event));
+        verify(messagingTemplate).convertAndSend("/topic/auctions/11", event);
     }
 
     @Test
@@ -940,7 +940,7 @@ class NotificationServiceImplTest {
 
         verify(repository).save(argThat(n ->
                 "sellerNoRepo".equals(n.getUserId()) && "AUCTION_BID_PLACED".equals(n.getType())));
-        verify(messagingTemplate, never()).convertAndSend(eq("/topic/auctions/44"), eq(event));
+        verify(messagingTemplate, never()).convertAndSend("/topic/auctions/44", event);
         verify(auctionParticipantRepository, never()).findByAuctionId(44L);
     }
 
