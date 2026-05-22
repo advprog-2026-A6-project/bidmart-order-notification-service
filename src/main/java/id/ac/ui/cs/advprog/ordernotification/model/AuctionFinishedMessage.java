@@ -12,6 +12,15 @@ import lombok.AllArgsConstructor;
 public class AuctionFinishedMessage {
     private Long auctionId;
     private String winnerId;
+    private String sellerId;
     private String itemName;
     private Double finalPrice;
+    private Long winningBidId;
+
+    public AuctionFinishedMessage(Long auctionId, String winnerId, String itemName, Double finalPrice) {
+        this.auctionId = auctionId;
+        this.winnerId = winnerId;
+        this.itemName = itemName;
+        this.finalPrice = finalPrice;
+    }
 }

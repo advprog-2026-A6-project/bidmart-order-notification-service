@@ -2,11 +2,15 @@ package id.ac.ui.cs.advprog.ordernotification.service;
 
 import id.ac.ui.cs.advprog.ordernotification.config.FeatureFlagProperties;
 import id.ac.ui.cs.advprog.ordernotification.dto.AuthContactPreferencesDto;
+import id.ac.ui.cs.advprog.ordernotification.model.AuctionEventMessage;
+import id.ac.ui.cs.advprog.ordernotification.model.AuctionFinishedMessage;
 import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationFactory;
 import id.ac.ui.cs.advprog.ordernotification.model.NotificationPreference;
 import id.ac.ui.cs.advprog.ordernotification.model.Order;
 import id.ac.ui.cs.advprog.ordernotification.event.WalletNotificationEvent;
+import id.ac.ui.cs.advprog.ordernotification.model.AuctionParticipant;
+import id.ac.ui.cs.advprog.ordernotification.repository.AuctionParticipantRepository;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationPreferenceRepository;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import id.ac.ui.cs.advprog.ordernotification.service.delivery.NotificationDeliveryStrategy;
@@ -29,7 +33,9 @@ import java.text.DecimalFormatSymbols;
 import java.util.List;
 import java.util.Optional;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -42,6 +48,8 @@ public class NotificationServiceImpl implements NotificationService {
     private final String authServiceUrl;
     private final String authInternalToken;
     private final FeatureFlagProperties featureFlags;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final Optional<AuctionParticipantRepository> auctionParticipantRepository;
 
     private static final String NOTIF_TYPE_ORDER_CREATED = "ORDER_CREATED";
     private static final String DEFAULT_WALLET_TYPE = "WALLET";
@@ -53,6 +61,7 @@ public class NotificationServiceImpl implements NotificationService {
             EmailService emailService,
             SimpMessagingTemplate messagingTemplate,
             Optional<List<NotificationDeliveryStrategy>> deliveryStrategiesOpt,
+            Optional<AuctionParticipantRepository> auctionParticipantRepository,
             RestTemplate restTemplate,
             @Value("${service.auth.url:}") String authServiceUrl,
             @Value("${service.auth.internal-token:${AUTH_INTERNAL_SERVICE_TOKEN:bidmart-internal-dev-token}}")
@@ -64,6 +73,8 @@ public class NotificationServiceImpl implements NotificationService {
         this.authServiceUrl = authServiceUrl;
         this.authInternalToken = authInternalToken;
         this.featureFlags = featureFlags;
+        this.messagingTemplate = messagingTemplate;
+        this.auctionParticipantRepository = auctionParticipantRepository;
         
         List<NotificationDeliveryStrategy> strategies = deliveryStrategiesOpt.isPresent()
                 ? deliveryStrategiesOpt.get() : Collections.emptyList();
@@ -83,7 +94,20 @@ public class NotificationServiceImpl implements NotificationService {
             SimpMessagingTemplate messagingTemplate,
             Optional<List<NotificationDeliveryStrategy>> deliveryStrategiesOpt) {
         this(repository, preferenceRepository, emailService, messagingTemplate, deliveryStrategiesOpt,
-                null, "", "bidmart-internal-dev-token", new FeatureFlagProperties());
+                Optional.empty(), null, "", "bidmart-internal-dev-token", new FeatureFlagProperties());
+    }
+
+    public NotificationServiceImpl(NotificationRepository repository,
+            NotificationPreferenceRepository preferenceRepository,
+            EmailService emailService,
+            SimpMessagingTemplate messagingTemplate,
+            Optional<List<NotificationDeliveryStrategy>> deliveryStrategiesOpt,
+            RestTemplate restTemplate,
+            String authServiceUrl,
+            String authInternalToken,
+            FeatureFlagProperties featureFlags) {
+        this(repository, preferenceRepository, emailService, messagingTemplate, deliveryStrategiesOpt,
+                Optional.empty(), restTemplate, authServiceUrl, authInternalToken, featureFlags);
     }
 
     @Override
@@ -169,6 +193,12 @@ public class NotificationServiceImpl implements NotificationService {
         if (featureFlags.isPushNotificationEnabled() && pref.isPushEnabled()) {
             executeDelivery("PUSH", userId, message, type, null);
         }
+        if (featureFlags.isEmailNotificationEnabled()
+                && pref.isEmailEnabled()
+                && pref.getEmail() != null
+                && !pref.getEmail().isBlank()) {
+            executeDelivery("EMAIL", userId, message, type, pref.getEmail());
+        }
     }
 
     @Override
@@ -180,6 +210,55 @@ public class NotificationServiceImpl implements NotificationService {
         String type = normalizeWalletType(event.getType());
         String notificationMessage = buildWalletMessage(event, type);
         sendNotification(event.getUserId(), notificationMessage, type);
+    }
+
+    @Override
+    public void createAuctionBidNotification(AuctionEventMessage event) {
+        if (event == null) {
+            return;
+        }
+
+        publishAuctionLiveUpdate(event);
+
+        Set<String> recipients = new LinkedHashSet<>(findKnownAuctionParticipants(event.getAuctionId()));
+        if (hasText(event.getSellerId())) {
+            recipients.add(event.getSellerId());
+        }
+        recipients.removeIf(userId -> !hasText(userId) || userId.equals(event.getBidderId()));
+
+        String itemName = safeItemName(event.getItemName());
+        String amount = formatRupiah(event.getBidAmount());
+        String message = "Ada penawaran baru sebesar " + amount + " untuk lelang " + itemName + ".";
+        recipients.forEach(userId -> sendNotification(userId, message, "AUCTION_BID_PLACED"));
+        rememberAuctionParticipant(event.getAuctionId(), event.getBidderId());
+    }
+
+    @Override
+    public void createAuctionOutbidNotification(AuctionEventMessage event) {
+        if (event == null || !hasText(event.getBidderId())) {
+            return;
+        }
+
+        publishAuctionLiveUpdate(event);
+
+        String itemName = safeItemName(event.getItemName());
+        String amount = formatRupiah(event.getNewBidAmount());
+        String message = "Anda dikalahkan dalam lelang " + itemName
+                + ". Penawaran tertinggi saat ini " + amount + ".";
+        sendNotification(event.getBidderId(), message, "AUCTION_OUTBID");
+    }
+
+    @Override
+    public void createAuctionWonNotification(AuctionFinishedMessage message) {
+        if (message == null || !hasText(message.getWinnerId())) {
+            return;
+        }
+
+        String itemName = safeItemName(message.getItemName());
+        String finalPrice = formatRupiah(BigDecimal.valueOf(message.getFinalPrice() == null ? 0 : message.getFinalPrice()));
+        String notification = "Selamat! Anda memenangkan lelang " + itemName
+                + " dengan harga akhir " + finalPrice + ".";
+        sendNotification(message.getWinnerId(), notification, "AUCTION_WON");
     }
 
     private String normalizeWalletType(String type) {
@@ -209,6 +288,42 @@ public class NotificationServiceImpl implements NotificationService {
         symbols.setGroupingSeparator('.');
         DecimalFormat format = new DecimalFormat("'Rp'#,##0", symbols);
         return format.format(safeAmount);
+    }
+
+    private void publishAuctionLiveUpdate(AuctionEventMessage event) {
+        if (!featureFlags.isWebsocketLiveUpdates() || messagingTemplate == null || event.getAuctionId() == null) {
+            return;
+        }
+        messagingTemplate.convertAndSend("/topic/auctions/" + event.getAuctionId(), event);
+    }
+
+    private String safeItemName(String itemName) {
+        return hasText(itemName) ? itemName.trim() : "ini";
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private List<String> findKnownAuctionParticipants(Long auctionId) {
+        if (auctionId == null || auctionParticipantRepository.isEmpty()) {
+            return List.of();
+        }
+        return auctionParticipantRepository.get().findByAuctionId(auctionId)
+                .stream()
+                .map(AuctionParticipant::getUserId)
+                .toList();
+    }
+
+    private void rememberAuctionParticipant(Long auctionId, String userId) {
+        if (auctionId == null || !hasText(userId) || auctionParticipantRepository.isEmpty()) {
+            return;
+        }
+
+        AuctionParticipantRepository participantRepository = auctionParticipantRepository.get();
+        if (participantRepository.findByAuctionIdAndUserId(auctionId, userId).isEmpty()) {
+            participantRepository.save(new AuctionParticipant(auctionId, userId));
+        }
     }
 
     private void executeDelivery(String channel, String userId, String message, String type, String recipient) {

@@ -24,6 +24,26 @@
     }
     .preview-label { color: var(--text-muted); font-weight: 500; }
     .preview-value { font-weight: 700; color: var(--text); }
+    .sim-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .sim-tab {
+        background: #f8fafc;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+        box-shadow: none;
+        padding: 0.65rem;
+        font-size: 0.8rem;
+    }
+    .sim-tab.active {
+        background: var(--primary);
+        color: white;
+    }
+    .sim-panel { display: none; }
+    .sim-panel.active { display: block; }
 </style>
 
 <nav th:replace="~{fragments/layout :: navbar('simulate')}"></nav>
@@ -33,7 +53,25 @@
         <div style="text-align: center; margin-bottom: 2rem;">
             <ion-icon name="flash-outline" style="font-size: 3rem; color: var(--accent);"></ion-icon>
             <h2>Simulator Auction Finish</h2>
-            <p style="color: var(--text-muted);">Gunakan halaman ini untuk mensimulasikan kejadian saat lelang berakhir dan pemenang ditentukan.</p>
+            <p style="color: var(--text-muted);">Gunakan halaman ini untuk mensimulasikan bid, outbid, pemenang lelang, dan pembuatan order otomatis.</p>
+        </div>
+
+        <div class="sim-tabs">
+            <button class="sim-tab active" onclick="setSimulation('finish')">Order Otomatis</button>
+            <button class="sim-tab" onclick="setSimulation('bid')">Bid Baru</button>
+            <button class="sim-tab" onclick="setSimulation('outbid')">Outbid</button>
+            <button class="sim-tab" onclick="setSimulation('won')">Menang</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="auctionId">Auction ID</label>
+                <input type="number" id="auctionId" value="101">
+            </div>
+            <div class="form-group">
+                <label for="sellerId">Seller User ID</label>
+                <input type="text" id="sellerId" value="seller-1">
+            </div>
         </div>
 
         <div class="form-group">
@@ -62,11 +100,40 @@
             </div>
         </div>
 
+        <div id="panel-bid" class="sim-panel">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="bidderId">Bidder User ID Baru</label>
+                    <input type="text" id="bidderId" value="bidder-2">
+                </div>
+                <div class="form-group">
+                    <label for="bidAmount">Nominal Bid Baru</label>
+                    <input type="number" id="bidAmount" value="1750000">
+                </div>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+                Simulasi ini juga menyimpan bidder sebagai peserta lelang lokal, jadi bid berikutnya bisa mengirim notifikasi ke peserta sebelumnya.
+            </p>
+        </div>
+
+        <div id="panel-outbid" class="sim-panel">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="outbidUserId">User yang Dikalahkan</label>
+                    <input type="text" id="outbidUserId" value="bidder-1">
+                </div>
+                <div class="form-group">
+                    <label for="newBidAmount">Bid Tertinggi Baru</label>
+                    <input type="number" id="newBidAmount" value="2000000">
+                </div>
+            </div>
+        </div>
+
         <div class="preview-box">
             <div style="font-weight: 800; font-size: 0.8rem; margin-bottom: 1rem; color: var(--primary);">PREVIEW EVENT</div>
             <div class="preview-item">
                 <span class="preview-label">Event Type:</span>
-                <span class="preview-value" style="color: var(--secondary);">WinnerDetermined</span>
+                <span id="preview-event-type" class="preview-value" style="color: var(--secondary);">AuctionFinished</span>
             </div>
             <div class="preview-item">
                 <span class="preview-label">Target Module:</span>
@@ -74,13 +141,13 @@
             </div>
         </div>
 
-        <button onclick="triggerAuctionFinish()" style="background: var(--text);">
-            <ion-icon name="play-circle-outline"></ion-icon> Trigger Auction Finish
+        <button onclick="triggerSelectedSimulation()" style="background: var(--text);">
+            <ion-icon name="play-circle-outline"></ion-icon> Jalankan Simulasi
         </button>
         
         <div id="result" style="margin-top: 1.5rem; display: none;" class="animate-fade">
             <div style="padding: 1rem; background: #dcfce7; color: #166534; border-radius: 12px; font-weight: 600; text-align: center;">
-                <ion-icon name="checkmark-circle"></ion-icon> Berhasil! Order otomatis telah dibuat.
+                <ion-icon name="checkmark-circle"></ion-icon> <span id="result-message">Berhasil! Simulasi telah dijalankan.</span>
             </div>
             <pre id="json-output" style="background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 12px; font-size: 0.8rem; margin-top: 10px; overflow-x: auto;"></pre>
         </div>
@@ -93,6 +160,23 @@
         phone: { name: "iPhone 15 Pro Max", price: 21000000 },
         camera: { name: "Sony A7 IV", price: 32000000 }
     };
+    let currentSimulation = 'finish';
+
+    function setSimulation(type) {
+        currentSimulation = type;
+        document.querySelectorAll('.sim-tab').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.querySelectorAll('.sim-panel').forEach(panel => panel.classList.remove('active'));
+        if (type === 'bid') document.getElementById('panel-bid').classList.add('active');
+        if (type === 'outbid') document.getElementById('panel-outbid').classList.add('active');
+        const labels = {
+            finish: 'AuctionFinished + OrderCreated',
+            bid: 'BidPlaced',
+            outbid: 'Outbid',
+            won: 'AuctionWon + OrderCreated'
+        };
+        document.getElementById('preview-event-type').innerText = labels[type] || 'AuctionEvent';
+    }
 
     function applyPreset() {
         const val = document.getElementById('item-preset').value;
@@ -102,20 +186,44 @@
         }
     }
 
-    function triggerAuctionFinish() {
+    function basePayload() {
+        return {
+            auctionId: Number(document.getElementById('auctionId').value),
+            sellerId: document.getElementById('sellerId').value,
+            winnerId: document.getElementById('winnerId').value,
+            itemName: document.getElementById('itemName').value,
+            finalPrice: Number(document.getElementById('finalPrice').value)
+        };
+    }
+
+    function triggerSelectedSimulation() {
         const btn = event.currentTarget;
         const originalHtml = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<ion-icon name="sync-outline" class="rotate"></ion-icon> Processing...';
 
-        const payload = {
-            auctionId: window.crypto.getRandomValues(new Uint32Array(1))[0] % 1000,
-            winnerId: document.getElementById('winnerId').value,
-            itemName: document.getElementById('itemName').value,
-            finalPrice: document.getElementById('finalPrice').value
-        };
+        let url = '/api/order-notification/auction-finish';
+        let payload = basePayload();
 
-        fetch('/api/order-notification/auction-finish', {
+        if (currentSimulation === 'bid') {
+            url = '/api/order-notification/simulate/bid-placed';
+            payload = {
+                ...payload,
+                bidderId: document.getElementById('bidderId').value,
+                bidAmount: Number(document.getElementById('bidAmount').value)
+            };
+        } else if (currentSimulation === 'outbid') {
+            url = '/api/order-notification/simulate/outbid';
+            payload = {
+                ...payload,
+                bidderId: document.getElementById('outbidUserId').value,
+                newBidAmount: Number(document.getElementById('newBidAmount').value)
+            };
+        } else if (currentSimulation === 'won') {
+            url = '/api/order-notification/simulate/auction-won';
+        }
+
+        fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -127,7 +235,14 @@
             
             document.getElementById('result').style.display = 'block';
             document.getElementById('json-output').innerText = JSON.stringify(data, null, 2);
-            showToast("Success! Order created automatically.", "success");
+            let resultText = 'Berhasil! Notifikasi lelang terkirim.';
+            if (currentSimulation === 'won') {
+                resultText = 'Berhasil! Notifikasi menang terkirim dan order otomatis dibuat.';
+            } else if (currentSimulation === 'finish') {
+                resultText = 'Berhasil! Order otomatis telah dibuat.';
+            }
+            document.getElementById('result-message').innerText = resultText;
+            showToast("Simulasi berhasil dijalankan.", "success");
         })
         .catch(err => {
             btn.disabled = false;
@@ -146,6 +261,8 @@
         const storedId = localStorage.getItem('bidmart_user_id');
         if (storedId) {
             document.getElementById('winnerId').value = storedId;
+            document.getElementById('bidderId').value = storedId;
+            document.getElementById('outbidUserId').value = storedId;
         }
     });
 </script>

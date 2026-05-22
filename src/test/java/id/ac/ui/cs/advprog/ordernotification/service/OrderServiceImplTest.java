@@ -119,6 +119,41 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void testFindByUserId() {
+        Order order = new Order();
+        order.setUserId("user1");
+        when(orderRepository.findByUserId("user1")).thenReturn(java.util.List.of(order));
+
+        var result = service.findByUserId("user1");
+
+        assertEquals(1, result.size());
+        verify(orderRepository).findByUserId("user1");
+    }
+
+    @Test
+    void testMarkPacked() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setUserId("user1");
+        order.setItemName("Item A");
+
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Order result = service.markPacked(1L);
+
+        assertEquals("PACKED", result.getStatus());
+        verify(notificationService).sendNotification(eq("user1"), anyString(), eq("ORDER_PACKED"));
+    }
+
+    @Test
+    void testMarkPacked_NotFound() {
+        when(orderRepository.findById(1L)).thenReturn(java.util.Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> service.markPacked(1L));
+    }
+
+    @Test
     void testUpdateTrackingNumber() {
         Order order = new Order();
         order.setId(1L);
