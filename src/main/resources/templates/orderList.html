@@ -53,6 +53,9 @@
     }
     .status-completed { background: #dcfce7; color: #166534; }
     .status-shipped { background: #e0f2fe; color: #075985; }
+    .status-packed { background: #fef3c7; color: #92400e; }
+    .status-paid { background: #dcfce7; color: #166534; }
+    .status-disputed { background: #fee2e2; color: #991b1b; }
     .status-automatic_created { background: #fef9c3; color: #854d0e; }
     .status-created { background: #f1f5f9; color: #475569; }
 
@@ -132,7 +135,7 @@
             <button id="btn-buyer" class="role-btn" onclick="setRole('buyer')">Mode Pembeli</button>
         </div>
         <p id="role-desc" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2rem;">
-            Sebagai <b>Penjual</b>, Anda bisa menginput nomor resi untuk mengirim barang.
+            Sebagai <b>Penjual</b>, Anda bisa menandai pesanan dikemas dan menginput nomor resi.
         </p>
     </div>
     
@@ -175,6 +178,11 @@
                     <div style="color: ${hasTracking ? '#059669' : '#94a3b8'}; font-weight: 800; font-size: 1.25rem; margin-bottom: 12px;">
                         ${o.trackingNumber || 'BELUM DIINPUT'}
                     </div>
+                    ${o.status === 'PAID' || o.status === 'AUTOMATIC_CREATED' || o.status === 'CREATED' ? `
+                        <button class="btn-outline" style="margin-bottom: 8px;" onclick="markPacked(${o.id})">
+                            <ion-icon name="cube-outline"></ion-icon> Tandai Dikemas
+                        </button>
+                    ` : ''}
                     <button onclick="toggleEdit(${o.id})">
                         <ion-icon name="create-outline"></ion-icon> ${hasTracking ? 'Update Resi' : 'Input Resi'}
                     </button>
@@ -196,6 +204,10 @@
                     <ion-icon name="heart-circle" style="font-size: 2rem;"></ion-icon>
                     <div style="font-weight: 700; font-size: 0.9rem;">BARANG TELAH DITERIMA</div>
                     <p style="font-size: 0.8rem;">Terima kasih telah berbelanja!</p>
+                    <button class="btn-outline" onclick="showDisputeForm(${o.id})">
+                        <ion-icon name="alert-circle-outline"></ion-icon> Ajukan Sengketa
+                    </button>
+                    ${buildDisputeForm(o)}
                 </div>
             `;
         }
@@ -208,6 +220,10 @@
                     <button style="background: #10b981;" onclick="confirmOrder(${o.id})">
                         <ion-icon name="checkmark-circle-outline"></ion-icon> Konfirmasi Terima Barang
                     </button>
+                    <button class="btn-outline" style="margin-top: 8px;" onclick="showDisputeForm(${o.id})">
+                        <ion-icon name="alert-circle-outline"></ion-icon> Ajukan Sengketa
+                    </button>
+                    ${buildDisputeForm(o)}
                 </div>
             `;
         }
@@ -216,6 +232,23 @@
             <div style="text-align: center; color: #64748b; padding: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px;">
                 <ion-icon name="hourglass-outline" style="font-size: 1.5rem;"></ion-icon>
                 <div style="font-size: 0.8rem;">Menunggu Penjual mengirim barang...</div>
+            </div>
+        `;
+    }
+
+    function buildDisputeForm(o) {
+        if (o.status === 'DISPUTED') {
+            return `
+                <div style="margin-top: 1rem; text-align: left; color: #991b1b; background: #fff1f2; padding: 1rem; border-radius: 12px;">
+                    <b>Sengketa ${o.disputeStatus || 'OPEN'}</b>
+                    <div style="font-size: 0.8rem;">${o.disputeReason || '-'}</div>
+                </div>
+            `;
+        }
+        return `
+            <div id="dispute-form-${o.id}" style="display: none; margin-top: 1rem;">
+                <input type="text" id="dispute-input-${o.id}" placeholder="Alasan sengketa, contoh: barang tidak sesuai" style="margin-bottom: 10px;">
+                <button style="background: #dc2626;" onclick="submitDispute(${o.id})">Kirim Sengketa</button>
             </div>
         `;
     }
@@ -270,6 +303,13 @@
                         <div class="tracking-section">
                             ${actionHtml}
                         </div>
+
+                        ${o.disputeReason ? `
+                            <div style="margin-top: 1rem; background: #fff1f2; color: #991b1b; padding: 1rem; border-radius: 14px; font-size: 0.85rem;">
+                                <b>Sengketa:</b> ${o.disputeReason}
+                                <div>Status: ${o.disputeStatus || '-'}</div>
+                            </div>
+                        ` : ''}
                         
                         <div style="margin-top: 1.5rem; font-size: 0.7rem; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
                             <ion-icon name="time-outline"></ion-icon> Dibuat pada: ${new Date(o.createdAt).toLocaleString('id-ID')}
@@ -314,6 +354,50 @@
                 loadOrders();
             } else {
                 showToast("Gagal memperbarui resi.", "error");
+            }
+        });
+    }
+
+    function markPacked(orderId) {
+        fetch(`/api/order-notification/orders/${orderId}/packed`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) {
+                    showToast("Pesanan ditandai dikemas. Pembeli telah dinotifikasi.", "success");
+                    loadOrders();
+                } else {
+                    showToast("Gagal menandai pesanan dikemas.", "error");
+                }
+            });
+    }
+
+    function showDisputeForm(orderId) {
+        const form = document.getElementById(`dispute-form-${orderId}`);
+        if (form) {
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+
+    function submitDispute(orderId) {
+        const input = document.getElementById(`dispute-input-${orderId}`);
+        const reason = input.value.trim();
+        if (!reason) {
+            showToast("Masukkan alasan sengketa terlebih dahulu.", "error");
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.append('reason', reason);
+
+        fetch(`/api/order-notification/orders/${orderId}/dispute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        }).then(res => {
+            if (res.ok) {
+                showToast("Sengketa berhasil diajukan.", "success");
+                loadOrders();
+            } else {
+                showToast("Gagal mengajukan sengketa.", "error");
             }
         });
     }

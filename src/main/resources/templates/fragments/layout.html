@@ -44,13 +44,16 @@
 </nav>
 
 <div th:fragment="footer-scripts">
-    <div id="toast-container" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;"></div>
+    <div id="toast-container" style="position: fixed; top: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 12px;"></div>
 
     <script>
         let stompClient = null;
 
         function connectWebSocket(userId) {
             if (!userId) return;
+            if (stompClient && stompClient.connected) {
+                stompClient.disconnect();
+            }
             const socket = new SockJS('/ws');
             stompClient = Stomp.over(socket);
             stompClient.debug = null; 
@@ -62,13 +65,37 @@
             });
         }
 
+        function connectAuctionWebSocket(auctionId) {
+            if (!auctionId) return;
+            const socket = new SockJS('/ws');
+            const auctionClient = Stomp.over(socket);
+            auctionClient.debug = null;
+            auctionClient.connect({}, function () {
+                auctionClient.subscribe('/topic/auctions/' + auctionId, function (event) {
+                    showToast('Live auction update diterima untuk auction #' + auctionId, 'info');
+                    document.dispatchEvent(new CustomEvent('auction-update', { detail: event.body }));
+                });
+            });
+            return auctionClient;
+        }
+
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast-alert';
-            
-            const icon = type === 'success' ? 'checkmark-circle' : 'notifications';
-            const accentColor = type === 'success' ? '#10b981' : '#6366f1';
+
+            const normalizedType = String(type || 'info').toLowerCase();
+            const normalizedMessage = String(message || '').toLowerCase();
+            const isError = normalizedType === 'error'
+                || normalizedType === 'failed'
+                || normalizedMessage.includes('gagal')
+                || normalizedMessage.includes('failed')
+                || normalizedMessage.includes('error');
+            let icon = 'checkmark-circle';
+            if (isError) {
+                icon = 'alert-circle';
+            }
+            const accentColor = isError ? '#ef4444' : '#10b981';
 
             toast.style.cssText = `
                 background: rgba(15, 23, 42, 0.9);
@@ -86,10 +113,15 @@
                 font-weight: 500;
             `;
 
-            toast.innerHTML = `
-                <ion-icon name="${icon}" style="font-size: 1.5rem; color: ${accentColor};"></ion-icon>
-                <span>${message}</span>
-            `;
+            const toastIcon = document.createElement('ion-icon');
+            toastIcon.setAttribute('name', icon);
+            toastIcon.style.cssText = `font-size: 1.5rem; color: ${accentColor}; flex: 0 0 auto;`;
+
+            const toastMessage = document.createElement('span');
+            toastMessage.textContent = message;
+
+            toast.appendChild(toastIcon);
+            toast.appendChild(toastMessage);
             
             container.appendChild(toast);
             
