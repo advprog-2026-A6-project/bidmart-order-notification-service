@@ -9,6 +9,7 @@ import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -29,14 +30,18 @@ public class AuthEventListener {
     private static final String ROLE_CREATED_EVENT = "auth.event.role_created";
     private static final String PERMISSION_CREATED_EVENT = "auth.event.permission_created";
     private static final String ROLE_PERMISSION_CHANGED_EVENT = "auth.event.role_permission_changed";
+    private static final String USER_NOTIFICATION_TOPIC_PREFIX = "/topic/notifications/";
 
     private final ObjectMapper objectMapper;
     private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
-    public AuthEventListener(ObjectMapper objectMapper, NotificationRepository notificationRepository) {
+    public AuthEventListener(ObjectMapper objectMapper, NotificationRepository notificationRepository,
+                             SimpMessagingTemplate messagingTemplate) {
         this.objectMapper = objectMapper;
         this.notificationRepository = notificationRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @RabbitListener(queues = RabbitMQConfig.AUTH_QUEUE_NAME)
@@ -44,10 +49,20 @@ public class AuthEventListener {
         try {
             Map<String, Object> eventPayload = objectMapper.readValue(payload, new TypeReference<>() {
             });
-            notificationRepository.save(buildNotification(routingKey, eventPayload));
+            Notification notification = buildNotification(routingKey, eventPayload);
+            notificationRepository.save(notification);
+            publishLiveNotification(notification);
         } catch (Exception exception) {
             throw new IllegalStateException("Gagal memproses event auth: " + routingKey, exception);
         }
+    }
+
+    private void publishLiveNotification(Notification notification) {
+        if (notification == null || SYSTEM_USER.equals(notification.getUserId())) {
+            return;
+        }
+
+        messagingTemplate.convertAndSend(USER_NOTIFICATION_TOPIC_PREFIX + notification.getUserId(), notification);
     }
 
     private Notification buildNotification(String routingKey, Map<String, Object> payload) {

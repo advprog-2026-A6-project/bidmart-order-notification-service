@@ -5,22 +5,27 @@ import id.ac.ui.cs.advprog.ordernotification.model.Notification;
 import id.ac.ui.cs.advprog.ordernotification.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 class AuthEventListenerTest {
 
     private NotificationRepository notificationRepository;
+    private SimpMessagingTemplate messagingTemplate;
     private AuthEventListener listener;
 
     @BeforeEach
     void setUp() {
         notificationRepository = mock(NotificationRepository.class);
-        listener = new AuthEventListener(new ObjectMapper(), notificationRepository);
+        messagingTemplate = mock(SimpMessagingTemplate.class);
+        listener = new AuthEventListener(new ObjectMapper(), notificationRepository, messagingTemplate);
     }
 
     @Test
@@ -36,6 +41,10 @@ class AuthEventListenerTest {
                         && "SYSTEM".equals(notification.getPreferenceType())
                         && "SENT".equals(notification.getStatus())
                         && notification.getMessage().contains("fraud")));
+        verify(messagingTemplate).convertAndSend(eq("/topic/notifications/42"), org.mockito.ArgumentMatchers.<Object>argThat(notification ->
+                notification instanceof Notification
+                        && "42".equals(((Notification) notification).getUserId())
+                        && ((Notification) notification).getMessage().contains("fraud")));
     }
 
     @Test
@@ -48,6 +57,10 @@ class AuthEventListenerTest {
                 "99".equals(notification.getUserId())
                         && notification.getMessage().contains("ADDED")
                         && notification.getMessage().contains("SELLER")));
+        verify(messagingTemplate).convertAndSend(eq("/topic/notifications/99"), org.mockito.ArgumentMatchers.<Object>argThat(notification ->
+                notification instanceof Notification
+                        && "99".equals(((Notification) notification).getUserId())
+                        && ((Notification) notification).getMessage().contains("SELLER")));
     }
 
     @Test
@@ -57,6 +70,7 @@ class AuthEventListenerTest {
         verify(notificationRepository).save(argThat(notification ->
                 "system".equals(notification.getUserId())
                         && notification.getMessage().contains("MODERATOR")));
+        verifyNoMoreInteractions(messagingTemplate);
     }
 
     @Test
