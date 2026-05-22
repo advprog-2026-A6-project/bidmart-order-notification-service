@@ -82,7 +82,7 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
 
         String message = ORDER_MESSAGE_PREFIX + savedOrder.getId()
-                + " (" + savedOrder.getItemName() + ") sedang dikemas.";
+                + " (" + safeItemName(savedOrder.getItemName()) + ") sedang dikemas.";
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_PACKED");
 
         return savedOrder;
@@ -95,9 +95,13 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("SHIPPED");
         Order savedOrder = orderRepository.save(order);
 
-        String message = ORDER_MESSAGE_PREFIX + savedOrder.getId()
-                + " (" + savedOrder.getItemName() + ") telah dikirim dengan nomor resi: " + trackingNumber;
-        notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_SHIPPED");
+        String pushMessage = ORDER_MESSAGE_PREFIX + savedOrder.getId()
+                + " (" + safeItemName(savedOrder.getItemName()) + ") telah dikirim dengan nomor resi: " + trackingNumber;
+        notificationService.sendNotification(
+                savedOrder.getUserId(),
+                pushMessage,
+                buildShippedEmailMessage(savedOrder),
+                "ORDER_SHIPPED");
         
         return savedOrder;
     }
@@ -108,8 +112,13 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("COMPLETED");
         Order savedOrder = orderRepository.save(order);
 
-        String message = buildReceiptConfirmedMessage(savedOrder);
-        notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_COMPLETED");
+        String pushMessage = ORDER_MESSAGE_PREFIX + savedOrder.getId()
+                + " (" + safeItemName(savedOrder.getItemName()) + ") telah selesai. Terima kasih!";
+        notificationService.sendNotification(
+                savedOrder.getUserId(),
+                pushMessage,
+                buildReceiptConfirmedEmailMessage(savedOrder),
+                "ORDER_COMPLETED");
         
         return savedOrder;
     }
@@ -122,13 +131,28 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus("DISPUTED");
         Order savedOrder = orderRepository.save(order);
         
-        String message = "Sengketa untuk pesanan #" + savedOrder.getId() + " (" + savedOrder.getItemName() + ") telah diajukan. Kami akan segera memprosesnya.";
+        String message = "Sengketa untuk pesanan #" + savedOrder.getId() + " (" + safeItemName(savedOrder.getItemName()) + ") telah diajukan. Kami akan segera memprosesnya.";
         notificationService.sendNotification(savedOrder.getUserId(), message, "ORDER_DISPUTED");
         
         return savedOrder;
     }
 
-    private String buildReceiptConfirmedMessage(Order order) {
+    private String buildShippedEmailMessage(Order order) {
+        return "Yth. Pengguna BidMart,\n\n" +
+                "Pesanan Anda telah dikirim oleh penjual melalui sistem BidMart.\n\n" +
+                "Detail Pengiriman:\n" +
+                "- ID Pesanan: #" + order.getId() + "\n" +
+                "- Nama Barang: " + safeItemName(order.getItemName()) + "\n" +
+                "- Total Harga: " + formatRupiah(order.getTotalPrice()) + "\n" +
+                "- Nomor Resi: " + safeTrackingNumber(order.getTrackingNumber()) + "\n\n" +
+                "Status: DIKIRIM\n\n" +
+                "Silakan gunakan nomor resi di atas untuk melacak pengiriman. " +
+                "Setelah barang diterima dan sesuai, Anda dapat mengonfirmasi penerimaan barang pada halaman pesanan.\n\n" +
+                "Salam hangat,\n" +
+                "BidMart";
+    }
+
+    private String buildReceiptConfirmedEmailMessage(Order order) {
         return "Yth. Pengguna BidMart,\n\n" +
                 "Kami mengonfirmasi bahwa barang untuk pesanan Anda telah diterima dan transaksi telah selesai di sistem BidMart.\n\n" +
                 "Detail Pesanan:\n" +

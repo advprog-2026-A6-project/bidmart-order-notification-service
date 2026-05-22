@@ -135,7 +135,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         NotificationPreference pref = getPreference(order.getUserId());
-        String messageBody = "Order #" + order.getId() + " untuk " + order.getItemName() + " telah dibuat.";
+        String messageBody = "Order #" + order.getId() + " untuk " + safeItemName(order.getItemName()) + " telah dibuat.";
 
         if (featureFlags.isPushNotificationEnabled() && pref.isPushEnabled()) {
             executeDelivery("PUSH", order.getUserId(), messageBody, NOTIF_TYPE_ORDER_CREATED, null);
@@ -195,15 +195,20 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void sendNotification(String userId, String message, String type) {
+        sendNotification(userId, message, message, type);
+    }
+
+    @Override
+    public void sendNotification(String userId, String pushMessage, String emailMessage, String type) {
         NotificationPreference pref = getPreference(userId);
         if (featureFlags.isPushNotificationEnabled() && pref.isPushEnabled()) {
-            executeDelivery("PUSH", userId, message, type, null);
+            executeDelivery("PUSH", userId, pushMessage, type, null);
         }
         if (featureFlags.isEmailNotificationEnabled()
                 && pref.isEmailEnabled()
                 && pref.getEmail() != null
                 && !pref.getEmail().isBlank()) {
-            executeDelivery("EMAIL", userId, message, type, pref.getEmail());
+            executeDelivery("EMAIL", userId, emailMessage, type, pref.getEmail());
         }
     }
 

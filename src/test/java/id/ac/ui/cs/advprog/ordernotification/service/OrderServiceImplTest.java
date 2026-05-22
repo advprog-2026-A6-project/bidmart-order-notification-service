@@ -167,7 +167,11 @@ class OrderServiceImplTest {
 
         assertEquals("RESI123", result.getTrackingNumber());
         assertEquals("SHIPPED", result.getStatus());
-        verify(notificationService).sendNotification(eq("user1"), anyString(), eq("ORDER_SHIPPED"));
+        verify(notificationService).sendNotification(
+                eq("user1"),
+                contains("telah dikirim dengan nomor resi: RESI123"),
+                contains("Detail Pengiriman:"),
+                eq("ORDER_SHIPPED"));
     }
 
     @Test
@@ -190,7 +194,11 @@ class OrderServiceImplTest {
         Order result = service.confirmReceipt(1L);
 
         assertEquals("COMPLETED", result.getStatus());
-        verify(notificationService).sendNotification(eq("user1"), anyString(), eq("ORDER_COMPLETED"));
+        verify(notificationService).sendNotification(
+                eq("user1"),
+                contains("telah selesai. Terima kasih!"),
+                contains("Status: SELESAI / BARANG DITERIMA"),
+                eq("ORDER_COMPLETED"));
     }
 
     @Test
